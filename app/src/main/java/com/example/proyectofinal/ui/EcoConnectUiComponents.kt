@@ -631,7 +631,6 @@ fun VistaDetalleReporteEngine(
     if (reporte == null) return
 
     val comentarios by viewModel.obtenerComentariosFlow(reporte.id).collectAsState(initial = emptyList())
-    val mensajesSimulados by viewModel.mensajesChat.collectAsState()
     var nuevoComentario by remember { mutableStateOf("") }
     val context = LocalContext.current
     var tts: TextToSpeech? by remember { mutableStateOf(null) }
@@ -709,32 +708,35 @@ fun VistaDetalleReporteEngine(
                     Text(" Apoyar este reporte (${reporte.votosApoyo} votos)")
                 }
                 HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
-                Text(stringResource(R.string.chat_community), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text("Comentarios Comunitarios", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(8.dp))
             }
 
-            items(mensajesSimulados) { msg ->
-                Card(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f))
-                ) {
-                    Column(modifier = Modifier.padding(8.dp)) {
-                        Text(msg.autor, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-                        Text(msg.mensaje, style = MaterialTheme.typography.bodyMedium)
-                        Text(msg.hora, style = MaterialTheme.typography.labelSmall, modifier = Modifier.align(Alignment.End))
+            if (comentarios.isEmpty()) {
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                    ) {
+                        Text(
+                            "Aún no hay comentarios en este reporte. ¡Sé el primero en participar!",
+                            modifier = Modifier.padding(16.dp),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
-            }
-
-            item {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text("Conversación Local", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            }
-
-            items(comentarios) { com ->
-                Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
-                    Column(modifier = Modifier.padding(8.dp)) {
-                        Text(com.autor, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge)
-                        Text(com.mensaje, style = MaterialTheme.typography.bodyMedium)
+            } else {
+                items(comentarios) { com ->
+                    Card(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Text(com.autor, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(com.mensaje, style = MaterialTheme.typography.bodyMedium)
+                        }
                     }
                 }
             }
@@ -811,21 +813,48 @@ fun VistaCrearReporteCamaraEngine(
             Spacer(modifier = Modifier.height(24.dp))
             
             if (imageUri == null) {
-                Button(
+                OutlinedButton(
                     onClick = { launcher.launch("image/*") },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Icon(Icons.Default.PhotoCamera, null)
+                    Icon(Icons.Default.AddPhotoAlternate, null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Seleccionar Foto Evidencia")
+                    Text("Seleccionar Fotografía de Evidencia")
                 }
             } else {
-                Card(modifier = Modifier.fillMaxWidth().height(200.dp)) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(220.dp),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
                     Box(modifier = Modifier.fillMaxSize()) {
-                        Text("Imagen seleccionada", modifier = Modifier.align(Alignment.Center))
-                        IconButton(onClick = { imageUri = null }, modifier = Modifier.align(Alignment.TopEnd)) {
-                            Icon(Icons.Default.Delete, null, tint = Color.Red)
+                        AsyncImage(
+                            model = imageUri,
+                            contentDescription = "Vista previa de la evidencia",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                        Surface(
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
+                                .padding(8.dp),
+                            shape = RoundedCornerShape(20.dp),
+                            color = Color.Black.copy(alpha = 0.65f)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                            ) {
+                                TextButton(onClick = { launcher.launch("image/*") }) {
+                                    Icon(Icons.Default.Edit, null, tint = Color.White, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("Cambiar", color = Color.White, style = MaterialTheme.typography.labelMedium)
+                                }
+                                IconButton(onClick = { imageUri = null }) {
+                                    Icon(Icons.Default.Delete, null, tint = Color(0xFFFF5252))
+                                }
+                            }
                         }
                     }
                 }
@@ -1015,36 +1044,163 @@ fun VistaSimuladorFDroidEngine(onVolver: () -> Unit) {
     }
 }
 
+data class PuntoRecoleccion(
+    val nombre: String,
+    val tipo: String,
+    val direccion: String,
+    val horario: String,
+    val estado: String,
+    val materiales: List<String>,
+    val distancia: String
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun VistaMapaSimuladoEngine(reportes: List<ReporteEntity>, onVolver: () -> Unit) {
+    var queryBusqueda by remember { mutableStateOf("") }
+    var categoriaFiltro by remember { mutableStateOf("Todos") }
+
+    val puntosRecoleccion = remember {
+        listOf(
+            PuntoRecoleccion(
+                nombre = "Centro de Acopio y Reciclaje Tecmilenio",
+                tipo = "Centro de Reciclaje",
+                direccion = "Av. de las Industrias #1110, Zona Norte",
+                horario = "Lun - Vie: 8:00 AM - 6:00 PM",
+                estado = "Abierto",
+                materiales = listOf("PET", "Aluminio", "Cartón", "Electrónicos"),
+                distancia = "A 0.8 km"
+            ),
+            PuntoRecoleccion(
+                nombre = "Módulo Verde Parque Central",
+                tipo = "Punto Comunitario",
+                direccion = "Av. Universidad y Calle 24a",
+                horario = "Lun - Sáb: 9:00 AM - 5:00 PM",
+                estado = "Abierto",
+                materiales = listOf("Vidrio", "Pilas", "Aceite Usado"),
+                distancia = "A 1.5 km"
+            ),
+            PuntoRecoleccion(
+                nombre = "Estación Ecológica La Junta",
+                tipo = "Punto de Depósito 24H",
+                direccion = "Calle La Junta #450, Col. Centro",
+                horario = "24 Horas",
+                estado = "Abierto 24H",
+                materiales = listOf("Basura General", "Contenedores Plásticos"),
+                distancia = "A 2.3 km"
+            ),
+            PuntoRecoleccion(
+                nombre = "Centro de Transferencia RSU Norte",
+                tipo = "Planta de Tratamiento",
+                direccion = "Km 5 Carretera a Juárez",
+                horario = "Lun - Sáb: 7:00 AM - 4:00 PM",
+                estado = "Cierra Pronto",
+                materiales = listOf("Escombro", "Llantas", "Chatarra"),
+                distancia = "A 4.1 km"
+            )
+        )
+    }
+
+    val puntosFiltrados = puntosRecoleccion.filter { p ->
+        (categoriaFiltro == "Todos" || p.materiales.contains(categoriaFiltro) || p.tipo == categoriaFiltro) &&
+        (p.nombre.contains(queryBusqueda, ignoreCase = true) || p.direccion.contains(queryBusqueda, ignoreCase = true))
+    }
+
     Scaffold(
-        topBar = { TopAppBar(title = { Text(stringResource(R.string.map)) }, navigationIcon = { IconButton(onClick = onVolver) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver") } }) }
+        topBar = {
+            TopAppBar(
+                title = { Text("Puntos de Recolección Cerca de Ti") },
+                navigationIcon = { IconButton(onClick = onVolver) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver") } }
+            )
+        }
     ) { padding ->
-        Column(modifier = Modifier.padding(padding).fillMaxSize()) {
-            // Un mapa real usando WebView (OpenStreetMap)
-            AndroidView(
-                factory = { context ->
-                    WebView(context).apply {
-                        webViewClient = WebViewClient()
-                        settings.javaScriptEnabled = true
-                        // Centrado en Chihuahua, México (Coordenadas aproximadas)
-                        loadUrl("https://www.openstreetmap.org/#map=13/28.6353/-106.0889")
-                    }
-                },
-                modifier = Modifier.weight(1f)
+        Column(modifier = Modifier.padding(padding).padding(16.dp).fillMaxSize()) {
+            if (reportes.isNotEmpty()) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text(
+                        "📍 Conectado con ${reportes.size} incidencias reportadas en tu zona",
+                        modifier = Modifier.padding(8.dp),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
+            }
+
+            OutlinedTextField(
+                value = queryBusqueda,
+                onValueChange = { queryBusqueda = it },
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text("Buscar centro o dirección...") },
+                leadingIcon = { Icon(Icons.Default.Search, null) },
+                singleLine = true
             )
             
-            Card(
-                modifier = Modifier.fillMaxWidth().padding(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text("Leyenda de Incidencias", fontWeight = FontWeight.Bold)
-                    Text("• Puntos Rojos: Urgentes", color = Color.Red, style = MaterialTheme.typography.bodySmall)
-                    Text("• Puntos Verdes: Resueltos", color = Color(0xFF2E7D32), style = MaterialTheme.typography.bodySmall)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text("Se han detectado ${reportes.size} focos de contaminación en tu zona.", style = MaterialTheme.typography.labelSmall)
+            Spacer(modifier = Modifier.height(12.dp))
+            val cats = listOf("Todos", "PET", "Aluminio", "Vidrio", "Pilas", "Cartón")
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(cats) { c ->
+                    BotonChipBorde(texto = c, seleccionado = categoriaFiltro == c) { categoriaFiltro = c }
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Directorio de Zonas Ecológicas", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.weight(1f))
+                Text("${puntosFiltrados.size} lugares", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.weight(1f)) {
+                items(puntosFiltrados) { punto ->
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Recycling, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(28.dp))
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(punto.nombre, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                                    Text(punto.tipo, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                                }
+                                SuggestionChip(
+                                    onClick = {},
+                                    label = { Text(punto.distancia, style = MaterialTheme.typography.labelSmall) }
+                                )
+                            }
+                            
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Place, null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(punto.direccion, style = MaterialTheme.typography.bodySmall)
+                            }
+                            
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Schedule, null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("${punto.horario} • ${punto.estado}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary)
+                            }
+
+                            Spacer(modifier = Modifier.height(8.dp))
+                            LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                items(punto.materiales) { mat ->
+                                    AssistChip(
+                                        onClick = {},
+                                        label = { Text(mat, style = MaterialTheme.typography.labelSmall) },
+                                        modifier = Modifier.height(28.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }

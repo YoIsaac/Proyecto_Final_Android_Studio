@@ -137,21 +137,6 @@ class EcoConnectViewModelAvanzado(
             }
         }
 
-        // Simular Chat Comunitario Activo
-        viewModelScope.launch {
-            val autores = listOf("MariaG", "EcoWarrior", "VecinoTec", "GreenLife")
-            val mensajes = listOf("¡Excelente iniciativa!", "¿Alguien sabe si ya lo arreglaron?", "Yo puedo ir a ayudar mañana.", "Gracias por reportar.")
-            while(true) {
-                delay(10000)
-                val nuevo = ComentarioComunitario(
-                    autor = autores.random(),
-                    mensaje = mensajes.random(),
-                    hora = "Hoy"
-                )
-                _mensajesChat.value = _mensajesChat.value.takeLast(10) + nuevo
-            }
-        }
-
         // Calcular CO2 total
         viewModelScope.launch {
             repository.todosLosReportes.collect { list ->
