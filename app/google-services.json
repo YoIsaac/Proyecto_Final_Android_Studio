@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1079652430071",
+    "project_id": "proyecto-final-ecoconect",
+    "storage_bucket": "proyecto-final-ecoconect.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1079652430071:android:df10126ea1703b75ef23f2",
+        "android_client_info": {
+          "package_name": "com.example.proyectofinal"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCkqrbCfDpOXYyUj_UEFW2w90ZsUgRze60"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

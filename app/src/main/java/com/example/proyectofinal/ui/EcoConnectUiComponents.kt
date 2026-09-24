@@ -74,23 +74,35 @@ fun PantallaDispatcherCentral(viewModel: EcoConnectViewModelAvanzado, windowSize
                 EcoNavegacionDestino.ONBOARDING_PASOS -> VistaOnboardingEngine {
                     viewModel.destinoActual = EcoNavegacionDestino.LOGIN_ACCESO
                 }
-                EcoNavegacionDestino.LOGIN_ACCESO -> VistaLoginEngine(
-                    onLoginExito = { email ->
-                        viewModel.loginConEmail(email)
-                    },
-                    onIrARegistro = {
-                        viewModel.destinoActual = EcoNavegacionDestino.REGISTRO_USUARIO
-                    },
-                    viewModel = viewModel
-                )
-                EcoNavegacionDestino.REGISTRO_USUARIO -> VistaRegistroEngine(
-                    onRegistroCompleto = { n, e ->
-                        viewModel.usuarioNombre = n
-                        viewModel.usuarioEmail = e
-                        viewModel.destinoActual = EcoNavegacionDestino.LOGIN_ACCESO
-                    },
-                    onVolverLogin = { viewModel.destinoActual = EcoNavegacionDestino.LOGIN_ACCESO }
-                )
+                EcoNavegacionDestino.LOGIN_ACCESO -> {
+                    val context = LocalContext.current
+                    VistaLoginEngine(
+                        onLoginExito = { email ->
+                            viewModel.registrarOSincronizarUsuarioConFirebase(
+                                email = email,
+                                nombre = email.substringBefore("@"),
+                                context = context
+                            )
+                        },
+                        onIrARegistro = {
+                            viewModel.destinoActual = EcoNavegacionDestino.REGISTRO_USUARIO
+                        },
+                        viewModel = viewModel
+                    )
+                }
+                EcoNavegacionDestino.REGISTRO_USUARIO -> {
+                    val context = LocalContext.current
+                    VistaRegistroEngine(
+                        onRegistroCompleto = { n, e ->
+                            viewModel.registrarOSincronizarUsuarioConFirebase(
+                                email = e,
+                                nombre = n,
+                                context = context
+                            )
+                        },
+                        onVolverLogin = { viewModel.destinoActual = EcoNavegacionDestino.LOGIN_ACCESO }
+                    )
+                }
                 EcoNavegacionDestino.DASHBOARD_FEED -> VistaDashboardEngine(
                     viewModel = viewModel,
                     windowSize = windowSize,
@@ -222,6 +234,7 @@ fun ItemOnboardingCard(titulo: String, desc: String, iconoStr: String) {
 fun VistaLoginEngine(onLoginExito: (String) -> Unit, onIrARegistro: () -> Unit, viewModel: EcoConnectViewModelAvanzado) {
     var email by remember { mutableStateOf("") }
     var pass by remember { mutableStateOf("") }
+    var errorEmailMessage by remember { mutableStateOf<String?>(null) }
     var nombreInvitado by remember { mutableStateOf("") }
     var mostrarDialogInvitado by remember { mutableStateOf(false) }
 
@@ -251,11 +264,43 @@ fun VistaLoginEngine(onLoginExito: (String) -> Unit, onIrARegistro: () -> Unit, 
         topBar = { TopAppBar(title = { Text(stringResource(R.string.login_title)) }) }
     ) { padding ->
         Column(modifier = Modifier.padding(padding).padding(24.dp).fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
-            OutlinedTextField(value = email, onValueChange = { email = it }, label = { Text(stringResource(R.string.email)) }, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(
+                value = email,
+                onValueChange = { 
+                    email = it
+                    errorEmailMessage = null
+                },
+                label = { Text(stringResource(R.string.email)) },
+                isError = errorEmailMessage != null,
+                supportingText = {
+                    errorEmailMessage?.let { msg ->
+                        Text(text = msg, color = MaterialTheme.colorScheme.error)
+                    }
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
             Spacer(modifier = Modifier.height(8.dp))
-            OutlinedTextField(value = pass, onValueChange = { pass = it }, label = { Text(stringResource(R.string.password)) }, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(
+                value = pass,
+                onValueChange = { pass = it },
+                label = { Text(stringResource(R.string.password)) },
+                visualTransformation = PasswordVisualTransformation(),
+                modifier = Modifier.fillMaxWidth()
+            )
             Spacer(modifier = Modifier.height(24.dp))
-            Button(onClick = { onLoginExito(email) }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.login_button)) }
+            Button(
+                onClick = { 
+                    if (!com.example.proyectofinal.utils.EcoConnectValidationUtils.esCorreoValido(email)) {
+                        errorEmailMessage = "Ingresa un correo electrónico válido (ej. usuario@dominio.com)"
+                    } else {
+                        errorEmailMessage = null
+                        onLoginExito(email)
+                    }
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) { 
+                Text(stringResource(R.string.login_button)) 
+            }
             TextButton(onClick = onIrARegistro) { Text(stringResource(R.string.no_account)) }
             
             HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
@@ -275,18 +320,72 @@ fun VistaRegistroEngine(onRegistroCompleto: (String, String) -> Unit, onVolverLo
     var nombre by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var pass by remember { mutableStateOf("") }
+    var errorEmailMessage by remember { mutableStateOf<String?>(null) }
+    var errorNombreMessage by remember { mutableStateOf<String?>(null) }
 
     Scaffold(
         topBar = { TopAppBar(title = { Text(stringResource(R.string.register_title)) }) }
     ) { padding ->
         Column(modifier = Modifier.padding(padding).padding(24.dp).fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
-            OutlinedTextField(value = nombre, onValueChange = { nombre = it }, label = { Text(stringResource(R.string.name)) }, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(
+                value = nombre,
+                onValueChange = { 
+                    nombre = it
+                    errorNombreMessage = null
+                },
+                label = { Text(stringResource(R.string.name)) },
+                isError = errorNombreMessage != null,
+                supportingText = {
+                    errorNombreMessage?.let { msg ->
+                        Text(text = msg, color = MaterialTheme.colorScheme.error)
+                    }
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
             Spacer(modifier = Modifier.height(8.dp))
-            OutlinedTextField(value = email, onValueChange = { email = it }, label = { Text(stringResource(R.string.email)) }, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(
+                value = email,
+                onValueChange = { 
+                    email = it
+                    errorEmailMessage = null
+                },
+                label = { Text(stringResource(R.string.email)) },
+                isError = errorEmailMessage != null,
+                supportingText = {
+                    errorEmailMessage?.let { msg ->
+                        Text(text = msg, color = MaterialTheme.colorScheme.error)
+                    }
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
             Spacer(modifier = Modifier.height(8.dp))
-            OutlinedTextField(value = pass, onValueChange = { pass = it }, label = { Text(stringResource(R.string.password)) }, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(
+                value = pass,
+                onValueChange = { pass = it },
+                label = { Text(stringResource(R.string.password)) },
+                visualTransformation = PasswordVisualTransformation(),
+                modifier = Modifier.fillMaxWidth()
+            )
             Spacer(modifier = Modifier.height(24.dp))
-            Button(onClick = { onRegistroCompleto(nombre, email) }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.register_button)) }
+            Button(
+                onClick = { 
+                    var valido = true
+                    if (nombre.isBlank()) {
+                        errorNombreMessage = "Ingresa tu nombre completo"
+                        valido = false
+                    }
+                    if (!com.example.proyectofinal.utils.EcoConnectValidationUtils.esCorreoValido(email)) {
+                        errorEmailMessage = "Ingresa un correo electrónico válido (ej. usuario@dominio.com)"
+                        valido = false
+                    }
+                    if (valido) {
+                        onRegistroCompleto(nombre, email)
+                    }
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) { 
+                Text(stringResource(R.string.register_button)) 
+            }
             TextButton(onClick = onVolverLogin) { Text(stringResource(R.string.back_to_login)) }
         }
     }

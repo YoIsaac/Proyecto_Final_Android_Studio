@@ -64,6 +64,40 @@ class EcoConnectCloudSyncEngine(
             _estadoSincronizacion.value = "Modo Demo Online Activo. (Error: ${e.message})"
         }
     }
+
+    fun guardarUsuarioEnRealtimeDatabase(
+        email: String,
+        nombre: String,
+        onSuccess: () -> Unit = {},
+        onError: (String) -> Unit = {}
+    ) {
+        try {
+            val realtimeDb = com.google.firebase.database.FirebaseDatabase.getInstance()
+            val ref = realtimeDb.getReference("usuarios")
+            val userId = email.replace(".", "_").replace("@", "_at_")
+
+            val usuarioData = hashMapOf(
+                "email" to email,
+                "nombre" to nombre,
+                "fechaRegistro" to SimpleDateFormat("dd/MM/yyyy HH:mm:ss", Locale.getDefault()).format(Date()),
+                "sincronizadoEnLinea" to true,
+                "plataforma" to "Android EcoConnect App"
+            )
+
+            ref.child(userId).setValue(usuarioData)
+                .addOnSuccessListener {
+                    _estadoSincronizacion.value = "Usuario guardado en Realtime Database"
+                    onSuccess()
+                }
+                .addOnFailureListener { e ->
+                    _estadoSincronizacion.value = "Realtime DB Sync Modo Demo"
+                    onError(e.localizedMessage ?: "Error de conexión")
+                }
+        } catch (e: Exception) {
+            _estadoSincronizacion.value = "Realtime DB Modo Demo"
+            onError(e.localizedMessage ?: "Error de inicialización")
+        }
+    }
 }
 
 
@@ -73,6 +107,9 @@ class EcoConnectRepository(
     private val cloudSyncEngine: EcoConnectCloudSyncEngine,
     private val context: Context
 ) {
+    fun guardarUsuarioEnRealtimeDatabase(email: String, nombre: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
+        cloudSyncEngine.guardarUsuarioEnRealtimeDatabase(email, nombre, onSuccess, onError)
+    }
     val todosLosReportes: Flow<List<ReporteEntity>> = database.reporteDao().obtenerTodosLosReportes()
     val notificaciones: Flow<List<NotificacionEntity>> = database.notificacionDao().obtenerNotificaciones()
 

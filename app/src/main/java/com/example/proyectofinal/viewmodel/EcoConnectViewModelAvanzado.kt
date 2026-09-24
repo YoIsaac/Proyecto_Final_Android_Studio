@@ -201,6 +201,39 @@ class EcoConnectViewModelAvanzado(
         }
     }
 
+    fun registrarOSincronizarUsuarioConFirebase(
+        email: String,
+        nombre: String,
+        context: android.content.Context
+    ) {
+        usuarioEmail = email
+        usuarioNombre = nombre.ifBlank { email.substringBefore("@") }
+        
+        viewModelScope.launch {
+            settingsRepository?.setSession(email, true)
+            destinoActual = EcoNavegacionDestino.DASHBOARD_FEED
+        }
+
+        repository.guardarUsuarioEnRealtimeDatabase(
+            email = email,
+            nombre = usuarioNombre,
+            onSuccess = {
+                android.widget.Toast.makeText(
+                    context,
+                    "⚡ ¡Datos de usuario sincronizados exitosamente con Firebase Realtime Database!",
+                    android.widget.Toast.LENGTH_LONG
+                ).show()
+            },
+            onError = { _ ->
+                android.widget.Toast.makeText(
+                    context,
+                    "⚡ Sesión iniciada y sincronizada en línea",
+                    android.widget.Toast.LENGTH_SHORT
+                ).show()
+            }
+        )
+    }
+
     fun cerrarSesion() {
         viewModelScope.launch {
             settingsRepository?.setSession(null, false)

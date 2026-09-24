@@ -61,6 +61,7 @@ dependencies {
     // Internet & Cloud (Firebase + Retrofit)
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.firestore)
+    implementation(libs.firebase.database)
     implementation(libs.firebase.storage)
     implementation(libs.firebase.auth)
     implementation(libs.retrofit)

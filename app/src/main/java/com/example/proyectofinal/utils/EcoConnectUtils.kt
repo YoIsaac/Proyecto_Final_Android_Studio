@@ -133,3 +133,12 @@ object EcoConnectRubricValidator {
         """.trimIndent()
     }
 }
+
+object EcoConnectValidationUtils {
+    fun esCorreoValido(email: String): Boolean {
+        val emailTrimmed = email.trim()
+        if (emailTrimmed.isBlank()) return false
+        val pattern = android.util.Patterns.EMAIL_ADDRESS
+        return pattern.matcher(emailTrimmed).matches()
+    }
+}

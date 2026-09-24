@@ -14,7 +14,7 @@
 
 * 🌐 **Landing Page Pública:** [https://IsaacBetance.github.io/ProyectoFinal/landing-page/](https://IsaacBetance.github.io/ProyectoFinal/landing-page/)
 * ⬇️ **Descargar APK Funcional:** [DESCARGAR ECOCONNECT.APK](./APK/EcoConnect.apk)
-* 📄 **Documentación Técnica PDF:** [VER DOCUMENTO FINAL PDF](./documentacion/documento-final.pdf)
+* 📄 **Documentación Técnica PDF (Fase I + II):** [VER DOCUMENTO FINAL PDF](./documentacion/documento-final.pdf)
 * 🎬 **Video Demostrativo:** [VER DETALLES Y ENLACE DE VIDEO](./video/enlace-video.txt)
 
 ---
@@ -43,32 +43,32 @@
 
 ---
 
-## ✨ **Principales Funcionalidades**
+## ✨ **Principales Funcionalidades y Validaciones**
 
-1. **Dashboard & Feed Comunitario Reactivo:**
+1. **Validación Estricta de Correo Electrónico (Regex):**
+   * Verificación en tiempo real de la estructura de correo (`usuario@dominio.com`) utilizando expresiones regulares (`android.util.Patterns.EMAIL_ADDRESS`) en las pantallas de Login y Registro, mostrando mensajes contextuales de error (`isError = true`).
+
+2. **Dashboard & Feed Comunitario Reactivo:**
    * Lista en tiempo real de todos los reportes comunitarios con filtros por categoría (*Basura*, *Fugas de Agua*, *Deforestación*, *Contaminación*).
    * Búsqueda en tiempo real potenciada por **SQLite FTS4**.
 
-2. **Creación de Reportes con Fotografía y GPS:**
-   * Captura desde la cámara o selección de galería.
-   * Geolocalización y clasificación por niveles de prioridad.
+3. **Creación de Reportes con Fotografía y GPS:**
+   * Captura desde la cámara o selección de galería con geolocalización y prioridad.
 
-3. **Asistente Inteligente de Residuos (IA Simulator):**
+4. **Asistente Inteligente de Residuos (IA Simulator):**
    * Clasificación automática para orientar al usuario sobre el tipo de residuo (PET, Orgánico, Vidrio, Papel/Cartón).
 
-4. **Interacción Comunitaria y Votación:**
-   * Sistema de apoyo para priorizar problemas urgentes.
-   * Hilos de comentarios por reporte.
-
-5. **Gamificación Ecológica:**
-   * Muro de Insignias (*Badges*), Tabla de Clasificación comunitaria (*Leaderboard*) y acumulación de **EcoPuntos**.
+5. **Gamificación e Interacción Comunitaria:**
+   * Muro de Insignias (*Badges*), Tabla de Clasificación comunitaria (*Leaderboard*), votos de apoyo y **EcoPuntos**.
 
 6. **Accesibilidad e Inclusión WCAG 2.1 AA:**
    * Modo Oscuro, Modo de Alto Contraste y Filtros para Daltonismo (*Protanopia*, *Deuteranopia*, *Tritanopia*).
    * Etiquetas semánticas para TalkBack y soporte bilingüe (Español / Inglés).
 
-7. **Persistencia y Sincronización Offline-First:**
-   * Base de datos Room con sincronización en segundo plano vía WorkManager al conectarse a Internet.
+7. **Pruebas de Conectividad en Línea (Cloud Verification):**
+   * **Consola Firebase:** Monitoreo en tiempo real de sincronización en la nube.
+   * **Prueba Offline-to-Online:** Guardado en Room en Modo Avión y sincronización automática vía **WorkManager** al restablecer la red.
+   * **Android Studio Network Inspector:** Confirmación de respuestas HTTP **200 OK**.
 
 ---
 
@@ -78,11 +78,17 @@
 /ProyectoFinal
 ├── /app                  -> Código fuente principal en Kotlin / Compose
 ├── /APK                  -> APK compilado funcional (EcoConnect.apk)
-├── /documentacion        -> Documentación técnica (documento-final.pdf y .md)
+├── /documentacion        -> Documentación técnica PDF y Markdown (documento-final.pdf y .md)
 ├── /landing-page         -> Landing Page pública responsiva (index.html, styles.css, script.js)
 ├── /video                -> Enlace e instrucciones del video demostrativo (enlace-video.txt)
 └── README.md             -> Portada principal del repositorio
 ```
+
+---
+
+## 🤖 **Uso de Inteligencia Artificial**
+
+Se utilizaron herramientas de IA para apoyar en la optimización del código de validaciones por expresiones regulares, estructura del archivo `README.md`, generación de pruebas unitarias y auditoría de accesibilidad WCAG 2.1 AA. Todo el código fue auditado y probado manualmente.
 
 ---
 
