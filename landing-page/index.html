@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EcoConnect - Plataforma Colaborativa de Monitoreo Ambiental</title>
+    <meta name="description" content="EcoConnect es una aplicación móvil para reportar, monitorear y resolver problemas ambientales comunitarios con gamificación, accesibilidad total e integración en la nube.">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <!-- Header / Navbar -->
+    <header class="navbar">
+        <div class="container nav-container">
+            <a href="#" class="brand">
+                <span class="brand-icon">🌱</span>
+                <span class="brand-text">Eco<span class="highlight">Connect</span></span>
+            </a>
+            <nav class="nav-links">
+                <a href="#inicio">Inicio</a>
+                <a href="#problema">Solución</a>
+                <a href="#caracteristicas">Funciones</a>
+                <a href="#accesibilidad">Accesibilidad</a>
+                <a href="#equipo">Equipo</a>
+            </nav>
+            <div class="nav-cta">
+                <a href="../APK/EcoConnect.apk" download class="btn btn-primary btn-sm">
+                    <span>⬇️ Descargar APK</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section id="inicio" class="hero">
+        <div class="container hero-container">
+            <div class="hero-content">
+                <div class="badge">🚀 Entrega Final del Reto - Mobile App</div>
+                <h1>Empoderando Comunidades para un <span class="text-gradient">Futuro Sostenible</span></h1>
+                <p>EcoConnect es la solución móvil integral que permite a la ciudadanía reportar, visibilizar y solucionar incidentes ecológicos en tiempo real con inteligencia artificial, gamificación y accesibilidad universal.</p>
+                <div class="hero-buttons">
+                    <a href="../APK/EcoConnect.apk" download class="btn btn-primary btn-lg">
+                        <span>⬇️ Descargar APK (v1.0)</span>
+                    </a>
+                    <a href="https://github.com/IsaacBetance/ProyectoFinal" target="_blank" rel="noopener" class="btn btn-secondary btn-lg">
+                        <span>💻 Ver Repositorio GitHub</span>
+                    </a>
+                </div>
+                <div class="hero-stats">
+                    <div class="stat-item">
+                        <span class="stat-number">100%</span>
+                        <span class="stat-label">Accessible (WCAG 2.1)</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number">Offline</span>
+                        <span class="stat-label">Room + Cloud Sync</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number">EcoPuntos</span>
+                        <span class="stat-label">Gamificación Activa</span>
+                    </div>
+                </div>
+            </div>
+            <div class="hero-visual">
+                <div class="phone-mockup">
+                    <div class="phone-screen">
+                        <div class="app-preview-header">
+                            <span class="app-title">🌿 EcoConnect Feed</span>
+                            <span class="app-status">⚡ En línea</span>
+                        </div>
+                        <div class="app-card">
+                            <div class="card-tag tag-high">🚨 Alta Prioridad</div>
+                            <h3>Canal Bloqueado con Plástico</h3>
+                            <p>Av. de las Industrias, Chihuahua</p>
+                            <div class="card-footer">
+                                <span>👍 28 Apoyos</span>
+                                <span class="status-badge">🔄 En Revisión</span>
+                            </div>
+                        </div>
+                        <div class="app-card">
+                            <div class="card-tag tag-med">💧 Fuga de Agua</div>
+                            <h3>Fuga de agua potable en calle 4ta</h3>
+                            <p>Centro Histórico</p>
+                            <div class="card-footer">
+                                <span>👍 15 Apoyos</span>
+                                <span class="status-badge tag-success">✅ Resuelto (+12kg CO2)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Problema y Necesidad -->
+    <section id="problema" class="section bg-light">
+        <div class="container">
+            <div class="section-title">
+                <h2>El Desafío Ambiental Urbano</h2>
+                <p>Las ciudades enfrentan problemas de acumulación de residuos, fugas de agua no atendidas y falta de participación ciudadana coordinada.</p>
+            </div>
+            <div class="grid grid-3">
+                <div class="feature-card">
+                    <div class="feature-icon">⚠️</div>
+                    <h3>Lenta Respuesta Ciudadana</h3>
+                    <p>Los reportes ambientales suelen perderse en burocracia o canales de atención ineficientes.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🌐</div>
+                    <h3>Falta de Visibilidad</h3>
+                    <p>La comunidad no cuenta con un mapa o feed transparente donde monitorear el estado de las problemáticas locales.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🎮</div>
+                    <h3>Sin Incentivos de Participación</h3>
+                    <p>Falta de reconocimiento a los ciudadanos comprometidos con el cuidado de sus espacios públicos.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Funcionalidades Clave -->
+    <section id="caracteristicas" class="section">
+        <div class="container">
+            <div class="section-title">
+                <h2>Principales Funcionalidades</h2>
+                <p>Diseñada bajo la arquitectura Android moderna con Kotlin, Jetpack Compose y Room Database.</p>
+            </div>
+            <div class="grid grid-3">
+                <div class="feature-box">
+                    <div class="box-icon">📸</div>
+                    <h3>Reporte Fotográfico & Geolocalizado</h3>
+                    <p>Captura imágenes desde la cámara o galería, detecta la ubicación y asigna niveles de prioridad automáticamente.</p>
+                </div>
+                <div class="feature-box">
+                    <div class="box-icon">🤖</div>
+                    <h3>Detección Asistida por IA</h3>
+                    <p>Asistente inteligente integrado para identificar tipos de residuos (PET, Orgánico, Vidrio, Cartón) antes de enviar el reporte.</p>
+                </div>
+                <div class="feature-box">
+                    <div class="box-icon">💾</div>
+                    <h3>Persistencia Híbrida Offline-First</h3>
+                    <p>Almacenamiento seguro en SQLite/Room con búsqueda FTS4 indexada y sincronización automática vía WorkManager a Firebase Cloud.</p>
+                </div>
+                <div class="feature-box">
+                    <div class="box-icon">🏆</div>
+                    <h3>Gamificación y EcoPuntos</h3>
+                    <p>Muro de insignias, tabla de clasificación comunitaria (Leaderboard) y recompensas por cada acción ambiental completada.</p>
+                </div>
+                <div class="feature-box">
+                    <div class="box-icon">📊</div>
+                    <h3>Calculadora de Huella de Carbono</h3>
+                    <p>Métrica en tiempo real de kg de CO₂ evitados en el entorno urbano gracias a las acciones de remediación.</p>
+                </div>
+                <div class="feature-box">
+                    <div class="box-icon">👤</div>
+                    <h3>Modo Invitado / Guest Flow</h3>
+                    <p>Acceso instantáneo a la app sin registros obligatorios para garantizar la máxima inclusión de usuarios casuales.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Accesibilidad e Inclusión -->
+    <section id="accesibilidad" class="section bg-dark text-white">
+        <div class="container">
+            <div class="section-title">
+                <h2 class="text-white">Diseño Inclusivo y Accesible (WCAG 2.1 AA)</h2>
+                <p class="text-muted">EcoConnect garantiza el acceso a todas las personas independientemente de sus capacidades visuales o motoras.</p>
+            </div>
+            <div class="grid grid-4">
+                <div class="access-card">
+                    <div class="access-icon">🌙</div>
+                    <h4>Modo Oscuro Adaptativo</h4>
+                    <p>Reduce la fatiga visual y optimiza la batería en pantallas OLED.</p>
+                </div>
+                <div class="access-card">
+                    <div class="access-icon">👁️</div>
+                    <h4>Alto Contraste Dinámico</h4>
+                    <p>Relación de contraste superior a 7:1 para legibilidad extrema.</p>
+                </div>
+                <div class="access-card">
+                    <div class="access-icon">🎨</div>
+                    <h4>Filtros para Daltonismo</h4>
+                    <p>Soporte para Deuteranopia, Protanopia y Tritanopia en tiempo real.</p>
+                </div>
+                <div class="access-card">
+                    <div class="access-icon">🗣️</div>
+                    <h4>Compatibilidad TalkBack</h4>
+                    <p>Descripciones semánticas en todos los botones y componentes interactivos.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Descarga y Repositorio -->
+    <section class="section cta-section">
+        <div class="container text-center">
+            <h2>¿Listo para transformar tu comunidad?</h2>
+            <p>Descarga el archivo APK de la aplicación e instálalo directamente en cualquier dispositivo Android 7.0 (API 24) o superior.</p>
+            <div class="hero-buttons justify-center">
+                <a href="../APK/EcoConnect.apk" download class="btn btn-primary btn-lg">
+                    <span>⬇️ Descargar APK Directo</span>
+                </a>
+                <a href="../video/enlace-video.txt" target="_blank" class="btn btn-secondary btn-lg">
+                    <span>🎬 Ver Video Demostrativo</span>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Equipo y Footer -->
+    <footer id="equipo" class="footer">
+        <div class="container footer-container">
+            <div class="footer-info">
+                <h3>EcoConnect</h3>
+                <p>Proyecto Final de Desarrollo de Aplicaciones Móviles</p>
+                <p>Tecmilenio - 2026</p>
+            </div>
+            <div class="footer-team">
+                <h4>Integrantes del Equipo</h4>
+                <ul>
+                    <li>👨‍💻 Isaac Betance - Desarrollador Principal</li>
+                </ul>
+            </div>
+            <div class="footer-links">
+                <h4>Enlaces Importantes</h4>
+                <ul>
+                    <li><a href="https://github.com/IsaacBetance/ProyectoFinal" target="_blank">Repositorio GitHub</a></li>
+                    <li><a href="../documentacion/documento-final.pdf" target="_blank">Documentación PDF</a></li>
+                    <li><a href="../APK/EcoConnect.apk" download>Descargar APK</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom text-center">
+            <p>&copy; 2026 EcoConnect. Proyecto Académico de Entrega Final.</p>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>

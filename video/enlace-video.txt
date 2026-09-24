@@ -1,0 +1,45 @@
+================================================================================
+                       ECOCONNECT - DEMO VIDEO & PRESENTATION
+================================================================================
+
+Aplicación: EcoConnect (Plataforma Colaborativa de Monitoreo y Reporte Ambiental)
+Equipo de Desarrollo: Isaac Betance y equipo
+Repositorio GitHub: https://github.com/IsaacBetance/ProyectoFinal
+Landing Page Pública: https://IsaacBetance.github.io/ProyectoFinal/landing-page/
+
+--------------------------------------------------------------------------------
+ENLACE AL VIDEO DEMOSTRATIVO
+--------------------------------------------------------------------------------
+YouTube / Vimeo / Google Drive URL:
+https://youtu.be/EcoConnectDemoFinal2026 (Reemplazar con el enlace final del video grabado)
+
+--------------------------------------------------------------------------------
+CONTENIDO DEL VIDEO DEMOSTRATIVO
+--------------------------------------------------------------------------------
+1. Pantalla de Inicio y Splash Screen Animado con soporte de bordes (Edge-to-Edge).
+2. Flujo de Autenticación Completo:
+   - Login con Correo Electrónico.
+   - Registro de Usuario.
+   - Modo Invitado (Guest Flow para accesibilidad inmediata).
+3. Dashboard y Feed Comunitario:
+   - Filtrado por Categorías (Basura, Fugas de Agua, Deforestación, Contaminación).
+   - Búsqueda en tiempo real indexada con SQLite FTS4.
+4. Creación de Reportes e Integración de Cámara:
+   - Captura de fotografía o selección desde galería.
+   - Clasificación inteligente con Simulador de IA de Residuos.
+   - Geolocalización del incidente.
+5. Detalle de Reporte e Interacciones Comunitarias:
+   - Sistema de votación para priorizar incidentes comunitarios.
+   - Comentarios en tiempo real.
+6. Accesibilidad e Inclusión (WCAG 2.1 AA):
+   - Cambio dinámico a Modo Oscuro.
+   - Modo de Alto Contraste para personas con baja visión.
+   - Filtros de Daltonismo (Protanopia, Deuteranopia, Tritanopia).
+   - Asistente de Texto a Voz (TalkBack ready con descripciones semánticas).
+7. Muro de Insignias y Gamificación Ecológica:
+   - Sistema de EcoPuntos.
+   - Tabla de Clasificación (Leaderboard).
+   - Calculadora de Huella de Carbono y CO2 Evitado.
+8. Persistencia y Sincronización Off-line:
+   - Base de Datos Local Room + SQLCipher.
+   - Worker en segundo plano (WorkManager) para sincronización con Firebase Cloud Firestore.
