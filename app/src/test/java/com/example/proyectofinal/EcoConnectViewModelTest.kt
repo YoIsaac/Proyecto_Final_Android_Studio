@@ -1,7 +1,6 @@
 package com.example.proyectofinal
 
 import com.example.proyectofinal.data.EcoConnectRepository
-import com.example.proyectofinal.data.ReporteEntity
 import com.example.proyectofinal.viewmodel.EcoConnectViewModelAvanzado
 import io.mockk.every
 import io.mockk.mockk
@@ -42,12 +41,12 @@ class EcoConnectViewModelTest {
 
     @Test
     fun `test initial EcoPuntos value`() {
-        assertEquals(320, viewModel.puntosAcumulados)
+        assertEquals(0, viewModel.puntosAcumulados)
     }
 
     @Test
     fun `test adding points when voting`() {
         viewModel.aplicarVotoComunitario("report_id")
-        assertEquals(325, viewModel.puntosAcumulados)
+        assertEquals(5, viewModel.puntosAcumulados)
     }
 }

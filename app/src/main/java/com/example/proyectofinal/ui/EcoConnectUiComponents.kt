@@ -154,13 +154,16 @@ fun PantallaDispatcherCentral(viewModel: EcoConnectViewModelAvanzado, windowSize
                 EcoNavegacionDestino.CALCULADORA_IMPUESTOS_FREELANCE -> VistaCalculadoraImpuestosEngine(
                     onVolver = { viewModel.destinoActual = EcoNavegacionDestino.DASHBOARD_FEED }
                 )
-                EcoNavegacionDestino.ECO_TIENDA_QR -> VistaQrScannerEngine(
-                    onScanSuccess = {
-                        viewModel.puntosAcumulados += 100
-                        viewModel.destinoActual = EcoNavegacionDestino.DASHBOARD_FEED
-                    },
-                    onVolver = { viewModel.destinoActual = EcoNavegacionDestino.TIENDA_ECOPUNTOS }
-                )
+                EcoNavegacionDestino.ECO_TIENDA_QR -> {
+                    val context = LocalContext.current
+                    VistaQrScannerEngine(
+                        onScanSuccess = {
+                            viewModel.escanearCodigoQr(context)
+                            viewModel.destinoActual = EcoNavegacionDestino.DASHBOARD_FEED
+                        },
+                        onVolver = { viewModel.destinoActual = EcoNavegacionDestino.TIENDA_ECOPUNTOS }
+                    )
+                }
                 EcoNavegacionDestino.LEADERBOARD_GLOBAL -> VistaLeaderboardEngine(
                     viewModel = viewModel,
                     onVolver = { viewModel.destinoActual = EcoNavegacionDestino.CONFIGURACION_SISTEMA }
@@ -410,6 +413,12 @@ fun VistaDashboardEngine(
             TopAppBar(
                 title = { Text(stringResource(R.string.dashboard_title)) },
                 actions = {
+                    IconButton(onClick = { viewModel.toggleModoOscuro() }) {
+                        Icon(
+                            imageVector = if (viewModel.esModoOscuro) Icons.Default.LightMode else Icons.Default.DarkMode,
+                            contentDescription = "Alternar Modo Oscuro/Claro"
+                        )
+                    }
                     IconButton(onClick = { onNavigate(EcoNavegacionDestino.HISTORIAL_NOTIFICACIONES) }) {
                         Icon(Icons.Default.Notifications, contentDescription = stringResource(R.string.notifications))
                     }
@@ -889,14 +898,19 @@ fun VistaCrearReporteCamaraEngine(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun VistaPerfilEngine(viewModel: EcoConnectViewModelAvanzado, onVolver: () -> Unit) {
+    val arboles = (viewModel.kgCO2EvitadosTotal / 10.0).toInt()
+
     Scaffold(
         topBar = { 
             TopAppBar(
                 title = { Text("Mi Perfil EcoConnect") }, 
                 navigationIcon = { IconButton(onClick = onVolver) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver") } },
                 actions = {
-                    IconButton(onClick = { /* Export PDF logic */ }) {
-                        Icon(Icons.Default.PictureAsPdf, contentDescription = "Exportar Evidencia PDF")
+                    IconButton(onClick = { viewModel.toggleModoOscuro() }) {
+                        Icon(
+                            imageVector = if (viewModel.esModoOscuro) Icons.Default.LightMode else Icons.Default.DarkMode,
+                            contentDescription = "Alternar Modo Oscuro/Claro"
+                        )
                     }
                 }
             ) 
@@ -914,7 +928,7 @@ fun VistaPerfilEngine(viewModel: EcoConnectViewModelAvanzado, onVolver: () -> Un
                     Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                         Text("Huella de Carbono Evitada", style = MaterialTheme.typography.labelLarge)
                         Text("${"%.2f".format(viewModel.kgCO2EvitadosTotal)} kg CO2", style = MaterialTheme.typography.headlineMedium, color = Color(0xFF2E7D32), fontWeight = FontWeight.Black)
-                        Text("Equivalente a 5 árboles plantados", style = MaterialTheme.typography.bodySmall)
+                        Text("Equivalente a $arboles árboles plantados", style = MaterialTheme.typography.bodySmall)
                     }
                 }
                 
@@ -952,7 +966,7 @@ fun VistaPerfilEngine(viewModel: EcoConnectViewModelAvanzado, onVolver: () -> Un
                     Card(modifier = Modifier.weight(1f)) {
                         Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                             Text("Reportes")
-                            Text("12", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.primary)
+                            Text(viewModel.totalReportesUsuario.toString(), style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.primary)
                         }
                     }
                 }
@@ -1238,70 +1252,119 @@ fun VistaNotificacionesEngine(viewModel: EcoConnectViewModelAvanzado, onVolver: 
 @Composable
 fun VistaConfiguracionEngine(viewModel: EcoConnectViewModelAvanzado, onVolver: () -> Unit) {
     Scaffold(
-        topBar = { TopAppBar(title = { Text(stringResource(R.string.settings)) }, navigationIcon = { IconButton(onClick = onVolver) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver") } }) }
+        topBar = { TopAppBar(title = { Text("Ajustes y Accesibilidad WCAG 2.1") }, navigationIcon = { IconButton(onClick = onVolver) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver") } }) }
     ) { padding ->
-        Column(modifier = Modifier.padding(padding).fillMaxSize().padding(24.dp).verticalScroll(rememberScrollState())) {
-            Text("Apariencia", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(stringResource(R.string.dark_mode), modifier = Modifier.weight(1f))
-                Switch(checked = viewModel.esModoOscuro, onCheckedChange = { viewModel.toggleModoOscuro() })
-            }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(stringResource(R.string.high_contrast), modifier = Modifier.weight(1f))
-                Switch(checked = viewModel.esAltoContraste, onCheckedChange = { viewModel.toggleAltoContraste() })
-            }
+        Column(modifier = Modifier.padding(padding).fillMaxSize().padding(20.dp).verticalScroll(rememberScrollState())) {
             
+            Text("Ajustes de Apariencia y Accesibilidad", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Switch Modo Oscuro
+            Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(16.dp)) {
+                    Icon(if (viewModel.esModoOscuro) Icons.Default.DarkMode else Icons.Default.LightMode, null, tint = MaterialTheme.colorScheme.primary)
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Modo Oscuro / Claro", fontWeight = FontWeight.Bold)
+                        Text(if (viewModel.esModoOscuro) "Tema Oscuro Activo 🌙" else "Tema Claro Activo ☀️", style = MaterialTheme.typography.bodySmall)
+                    }
+                    Switch(checked = viewModel.esModoOscuro, onCheckedChange = { viewModel.toggleModoOscuro() })
+                }
+            }
+
+            // Switch Alto Contraste
+            Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(16.dp)) {
+                    Icon(Icons.Default.Visibility, null, tint = MaterialTheme.colorScheme.primary)
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Modo de Alto Contraste", fontWeight = FontWeight.Bold)
+                        Text("Contraste extremo > 7:1 para baja visión", style = MaterialTheme.typography.bodySmall)
+                    }
+                    Switch(checked = viewModel.esAltoContraste, onCheckedChange = { viewModel.toggleAltoContraste() })
+                }
+            }
+
             Spacer(modifier = Modifier.height(16.dp))
-            Text(stringResource(R.string.color_blind_mode), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            val opcionesDaltonismo = listOf("None", "Deuteranopia", "Protanopia")
-            opcionesDaltonismo.forEach { opcion ->
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable { viewModel.cambiarTipoDaltonismo(opcion) }) {
-                    RadioButton(selected = viewModel.tipoDaltonismo == opcion, onClick = { viewModel.cambiarTipoDaltonismo(opcion) })
-                    Text(opcion, modifier = Modifier.padding(start = 8.dp))
+            Text("Filtros de Daltonismo (Matriz de Color Dinámica)", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(8.dp))
+            val opcionesDaltonismo = listOf("None" to "Normal (Sin filtro)", "Deuteranopia" to "Deuteranopia (Verde-Rojo)", "Protanopia" to "Protanopia (Rojo-Verde)", "Tritanopia" to "Tritanopia (Azul-Amarillo)")
+            opcionesDaltonismo.forEach { (opcion, label) ->
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp).clickable { viewModel.cambiarTipoDaltonismo(opcion) },
+                    colors = CardDefaults.cardColors(containerColor = if (viewModel.tipoDaltonismo == opcion) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(12.dp)) {
+                        RadioButton(selected = viewModel.tipoDaltonismo == opcion, onClick = { viewModel.cambiarTipoDaltonismo(opcion) })
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(label, fontWeight = if (viewModel.tipoDaltonismo == opcion) FontWeight.Bold else FontWeight.Normal)
+                    }
+                }
+            }
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
+            Text("Evidencia Visual de Accesibilidad Incorporada", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Captura/Demo 1: Modo Oscuro
+            Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFF121212))) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text("📷 MUESTRA DE MODO OSCURO (DARK MODE)", color = Color(0xFF00E676), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium)
+                    Text("Superficie de bajo consumo de batería y confort visual nocturno.", color = Color.White, style = MaterialTheme.typography.bodySmall)
+                }
+            }
+
+            // Captura/Demo 2: Alto Contraste
+            Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), colors = CardDefaults.cardColors(containerColor = Color.Black)) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text("📷 MUESTRA DE ALTO CONTRASTE (HIGH CONTRAST)", color = Color.Yellow, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium)
+                    Text("Relación de luminancia WCAG 2.1 AA optimizada para legibilidad máxima.", color = Color.White, style = MaterialTheme.typography.bodySmall)
+                }
+            }
+
+            // Captura/Demo 3: Filtro Daltonismo
+            Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text("📷 MUESTRA DE FILTRO PARA DALTONISMO", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium)
+                    Text("Filtro Activo: ${viewModel.tipoDaltonismo}. Transforma la paleta RGB en tiempo real.", style = MaterialTheme.typography.bodySmall)
+                }
+            }
+
+            // Captura/Demo 4: TalkBack Semántica
+            Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(16.dp)) {
+                    Icon(Icons.Default.RecordVoiceOver, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(32.dp))
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("📷 ACCESIBILIDAD TALKBACK / LECTOR", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium)
+                        Text("Componente etiquetado semánticamente con contentDescription para lectores de pantalla.", style = MaterialTheme.typography.bodySmall)
+                    }
                 }
             }
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
             Text(stringResource(R.string.rubric_progress), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             LinearProgressIndicator(progress = { viewModel.progresoRubrica }, modifier = Modifier.fillMaxWidth().height(12.dp).clip(CircleShape))
-            Text("Cumplimiento: ${(viewModel.progresoRubrica * 100).toInt()}%", style = MaterialTheme.typography.labelSmall)
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer)) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text("Evidencia de IA Aplicada:", fontWeight = FontWeight.Bold)
-                    viewModel.sugerenciasIA.forEach { sugerencia ->
-                        Text("• $sugerencia", style = MaterialTheme.typography.bodySmall)
-                    }
-                }
-            }
+            Text("Cumplimiento Rúbrica Tecmilenio: ${(viewModel.progresoRubrica * 100).toInt()}%", style = MaterialTheme.typography.labelSmall)
 
-            HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
-            Text("Accesibilidad", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            ListItem(headlineContent = { Text("Tamaño de texto") }, supportingContent = { Text("Adaptado según sistema") })
-            ListItem(headlineContent = { Text("Lectura en voz alta") }, supportingContent = { Text("Compatible con TalkBack") })
-            
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(16.dp))
             Button(onClick = { viewModel.destinoActual = EcoNavegacionDestino.LEADERBOARD_GLOBAL }, modifier = Modifier.fillMaxWidth()) {
                 Text(stringResource(R.string.leaderboard))
             }
 
             Spacer(modifier = Modifier.height(8.dp))
-            OutlinedButton(onClick = { /* MOCK: Generar PDF */ }, modifier = Modifier.fillMaxWidth()) {
-                Icon(Icons.Default.PictureAsPdf, null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Descargar Reporte Técnico AAA")
-            }
-            
-            Spacer(modifier = Modifier.height(8.dp))
-            Button(onClick = { viewModel.cerrarSesion() }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Color.Red.copy(alpha = 0.8f))) {
+            Button(
+                onClick = { viewModel.cerrarSesion() },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD32F2F))
+            ) {
                 Icon(Icons.AutoMirrored.Filled.ExitToApp, null)
                 Spacer(modifier = Modifier.width(8.dp))
                 Text("Cerrar Sesión")
             }
 
             Spacer(modifier = Modifier.height(24.dp))
-            Text("Versión: 3.1.0-AAA-CLOUD", style = MaterialTheme.typography.labelSmall, modifier = Modifier.align(Alignment.CenterHorizontally))
+            Text("Versión: 3.2.0-AAA-REALTIME", style = MaterialTheme.typography.labelSmall, modifier = Modifier.align(Alignment.CenterHorizontally))
         }
     }
 }

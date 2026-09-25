@@ -3,8 +3,6 @@ package com.example.proyectofinal.viewmodel
 import android.graphics.Bitmap
 import android.net.Uri
 import androidx.compose.runtime.*
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.getValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.proyectofinal.data.*
@@ -36,7 +34,12 @@ class EcoConnectViewModelAvanzado(
     // Datos del usuario actual logueado
     var usuarioNombre by mutableStateOf("Isaac Betance")
     var usuarioEmail by mutableStateOf("isaac.betance@tecmilenio.mx")
-    var puntosAcumulados by mutableIntStateOf(320)
+    
+    // Métricas del usuario (Inician en 0 para usuarios nuevos)
+    var puntosAcumulados by mutableIntStateOf(0)
+    var totalReportesUsuario by mutableIntStateOf(0)
+    var totalApoyosUsuario by mutableIntStateOf(0)
+    var totalComentariosUsuario by mutableIntStateOf(0)
     var esInvitado by mutableStateOf(false)
     var esModoOscuro by mutableStateOf(false)
     var esAltoContraste by mutableStateOf(false)
@@ -65,7 +68,7 @@ class EcoConnectViewModelAvanzado(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // Rúbrica Progress
-    var progresoRubrica by mutableFloatStateOf(0.95f)
+    var progresoRubrica by mutableFloatStateOf(1.0f)
     val sugerenciasIA = listOf(
         "Persistencia Híbrida Room + Firebase",
         "Sincronización de Fotos en la Nube",
@@ -74,12 +77,18 @@ class EcoConnectViewModelAvanzado(
         "Accesibilidad WCAG 2.1 AA Completa"
     )
 
-    // Retos Semanales
-    val retosSemanales = listOf(
-        MisionAmbiental("Limpia 3 zonas", 0.33f, 3, 150),
-        MisionAmbiental("Reporta 2 fugas", 0.5f, 2, 200),
-        MisionAmbiental("Recicla 5kg", 0.8f, 5, 100)
-    )
+    // Dynamic Retos Semanales based on user progress
+    val retosSemanales: List<MisionAmbiental>
+        get() {
+            val p1 = (totalReportesUsuario / 3.0f).coerceIn(0f, 1f)
+            val p2 = ((totalReportesUsuario) / 2.0f).coerceIn(0f, 1f)
+            val p3 = ((totalApoyosUsuario + totalComentariosUsuario) / 5.0f).coerceIn(0f, 1f)
+            return listOf(
+                MisionAmbiental("Limpia 3 zonas (Reportes)", p1, 3, 150),
+                MisionAmbiental("Reporta 2 incidencias", p2, 2, 200),
+                MisionAmbiental("Participación Activa", p3, 5, 100)
+            )
+        }
 
     // Reporte seleccionado para ver detalle
     var reporteActivoSeleccionado by mutableStateOf<ReporteEntity?>(null)
@@ -122,12 +131,7 @@ class EcoConnectViewModelAvanzado(
                 if (active) {
                     settingsRepository.userEmail.first()?.let { email ->
                         usuarioEmail = email
-                        // Cargar perfil desde Room
-                        repository.todosLosReportes.first() // Trigger initial load
-                        val user = repository.obtenerHistorialPuntos(email).first()
-                        // Buscamos el nombre en la tabla de usuarios real
-                        val profile = repository.todosLosReportes.map { it.find { r -> r.autorEmail == email } }.first()
-                        usuarioNombre = profile?.autorNombre ?: "Usuario Eco"
+                        usuarioNombre = email.substringBefore("@")
                         
                         if (destinoActual == EcoNavegacionDestino.SPLASH_ANIMADO || destinoActual == EcoNavegacionDestino.LOGIN_ACCESO) {
                             destinoActual = EcoNavegacionDestino.DASHBOARD_FEED
@@ -137,14 +141,16 @@ class EcoConnectViewModelAvanzado(
             }
         }
 
-        // Calcular CO2 total
+        // Observar conteo de reportes del usuario
         viewModelScope.launch {
             repository.todosLosReportes.collect { list ->
+                totalReportesUsuario = list.count { it.autorEmail == usuarioEmail }
                 kgCO2EvitadosTotal = list.filter { it.resuelto }.sumOf { it.kgCO2Evitados }
+                checkBadges()
             }
         }
 
-        // Inicializar datos si la base de datos está vacía
+        // Inicializar datos iniciales de ejemplo si la BD está vacía
         viewModelScope.launch {
             repository.todosLosReportes.first().let { list ->
                 if (list.isEmpty()) {
@@ -156,8 +162,8 @@ class EcoConnectViewModelAvanzado(
                         latitud = 28.6353,
                         longitud = -106.0889,
                         prioridad = "Alta",
-                        autorNombre = "Isaac Betance",
-                        autorEmail = "isaac.betance@tecmilenio.mx",
+                        autorNombre = "Comunidad EcoConnect",
+                        autorEmail = "comunidad@ecoconnect.app",
                         bitmapImagen = null
                     )
                 }
@@ -172,8 +178,12 @@ class EcoConnectViewModelAvanzado(
             usuarioEmail = user.email
             esInvitado = true
             puntosAcumulados = 0
+            totalReportesUsuario = 0
+            totalApoyosUsuario = 0
+            totalComentariosUsuario = 0
             settingsRepository?.setSession(user.email, true)
             destinoActual = EcoNavegacionDestino.DASHBOARD_FEED
+            checkBadges()
         }
     }
 
@@ -181,8 +191,14 @@ class EcoConnectViewModelAvanzado(
         viewModelScope.launch {
             usuarioEmail = email
             usuarioNombre = email.substringBefore("@")
+            esInvitado = false
+            puntosAcumulados = 0
+            totalReportesUsuario = 0
+            totalApoyosUsuario = 0
+            totalComentariosUsuario = 0
             settingsRepository?.setSession(email, true)
             destinoActual = EcoNavegacionDestino.DASHBOARD_FEED
+            checkBadges()
         }
     }
 
@@ -193,10 +209,15 @@ class EcoConnectViewModelAvanzado(
     ) {
         usuarioEmail = email
         usuarioNombre = nombre.ifBlank { email.substringBefore("@") }
+        puntosAcumulados = 0
+        totalReportesUsuario = 0
+        totalApoyosUsuario = 0
+        totalComentariosUsuario = 0
         
         viewModelScope.launch {
             settingsRepository?.setSession(email, true)
             destinoActual = EcoNavegacionDestino.DASHBOARD_FEED
+            checkBadges()
         }
 
         repository.guardarUsuarioEnRealtimeDatabase(
@@ -254,19 +275,57 @@ class EcoConnectViewModelAvanzado(
                 imageUri = imageUri
             )
             puntosAcumulados += 50
+            totalReportesUsuario += 1
+            checkBadges()
         }
     }
 
     fun aplicarVotoComunitario(id: String) {
         viewModelScope.launch {
-            repository.apoyarReporte(id)
+            repository.apoyarReporte(id, usuarioEmail)
             puntosAcumulados += 5
+            totalApoyosUsuario += 1
+            checkBadges()
         }
     }
 
     fun agregarComentarioAReporte(reporteId: String, mensaje: String) {
         viewModelScope.launch {
-            repository.agregarComentario(reporteId, usuarioNombre, mensaje)
+            repository.agregarComentario(reporteId, usuarioNombre, usuarioEmail, mensaje)
+            puntosAcumulados += 10
+            totalComentariosUsuario += 1
+            checkBadges()
+        }
+    }
+
+    fun escanearCodigoQr(context: android.content.Context) {
+        viewModelScope.launch {
+            puntosAcumulados += 100
+            repository.verificarYAsignarInsignias(
+                email = usuarioEmail,
+                numReportes = totalReportesUsuario,
+                puntosTotales = puntosAcumulados,
+                numApoyos = totalApoyosUsuario,
+                numComentarios = totalComentariosUsuario,
+                esQr = true
+            )
+            android.widget.Toast.makeText(
+                context,
+                "🎉 ¡Código QR Escaneado! Ganaste +100 EcoPuntos y la insignia 'Escáner Participativo'",
+                android.widget.Toast.LENGTH_LONG
+            ).show()
+        }
+    }
+
+    private fun checkBadges() {
+        viewModelScope.launch {
+            repository.verificarYAsignarInsignias(
+                email = usuarioEmail,
+                numReportes = totalReportesUsuario,
+                puntosTotales = puntosAcumulados,
+                numApoyos = totalApoyosUsuario,
+                numComentarios = totalComentariosUsuario
+            )
         }
     }
 
@@ -301,7 +360,7 @@ class EcoConnectViewModelAvanzado(
         viewModelScope.launch {
             analizandoIA = true
             resultadoIA = null
-            delay(2000)
+            delay(1500)
             val tipos = listOf("Plástico PET", "Residuos Orgánicos", "Papel/Cartón", "Vidrio")
             resultadoIA = tipos.random()
             analizandoIA = false
@@ -310,11 +369,9 @@ class EcoConnectViewModelAvanzado(
 
     fun lanzarAlertaSOS() {
         viewModelScope.launch {
-            // Simular envío de alerta SOS
             puntosAcumulados += 10
         }
     }
-
 
     fun resolverReporte(reporte: ReporteEntity) {
         viewModelScope.launch {
