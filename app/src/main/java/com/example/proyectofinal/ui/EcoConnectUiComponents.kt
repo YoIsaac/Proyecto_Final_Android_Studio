@@ -3,6 +3,7 @@ package com.example.proyectofinal.ui
 import androidx.compose.animation.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -467,11 +468,63 @@ fun VistaDashboardEngine(
         }
     ) { padding ->
         if (mostrarSOS) {
+            var tituloCritico by remember { mutableStateOf("Fuga Severa / Contaminación Urgente") }
+            var zonaCritica by remember { mutableStateOf("Av. Central y Calle 5a") }
+
             AlertDialog(
                 onDismissRequest = { mostrarSOS = false },
-                confirmButton = { Button(onClick = { viewModel.lanzarAlertaSOS(); mostrarSOS = false }) { Text("CONFIRMAR SOS") } },
-                title = { Text(stringResource(R.string.sos_alert), color = Color.Red) },
-                text = { Text(stringResource(R.string.sos_desc)) }
+                title = { 
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Warning, null, tint = Color.Red)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("🚨 Reportar Incidencia Crítica", color = Color.Red, fontWeight = FontWeight.Bold)
+                    }
+                },
+                text = {
+                    Column {
+                        Text("Publica un reporte destacado con marco rojo de MÁXIMA PRIORIDAD en el feed de la comunidad.", style = MaterialTheme.typography.bodySmall)
+                        Spacer(modifier = Modifier.height(12.dp))
+                        OutlinedTextField(
+                            value = tituloCritico,
+                            onValueChange = { tituloCritico = it },
+                            label = { Text("Título de la emergencia") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedTextField(
+                            value = zonaCritica,
+                            onValueChange = { zonaCritica = it },
+                            label = { Text("Zona / Ubicación exacta") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            if (tituloCritico.isNotBlank() && zonaCritica.isNotBlank()) {
+                                viewModel.guardarNuevoReporte(
+                                    titulo = "🚨 CRÍTICO: $tituloCritico",
+                                    descripcion = "Incidencia urgente reportada con máxima prioridad para la comunidad.",
+                                    categoria = "Contaminación",
+                                    ubicacion = zonaCritica,
+                                    prioridad = "🚨 Urgente / Crítico",
+                                    bitmap = null,
+                                    imageUri = null
+                                )
+                                mostrarSOS = false
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
+                    ) {
+                        Text("Publicar Reporte Crítico", color = Color.White)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { mostrarSOS = false }) {
+                        Text("Cancelar")
+                    }
+                }
             )
         }
         Column(modifier = Modifier.padding(padding).fillMaxSize()) {
@@ -573,51 +626,71 @@ fun BotonChipBorde(texto: String, seleccionado: Boolean, onClick: () -> Unit) {
 
 @Composable
 fun TarjetaReporteEngine(reporte: ReporteEntity, onClick: () -> Unit, onVotar: () -> Unit) {
+    val esCritico = reporte.prioridad.contains("Urgente", ignoreCase = true) || reporte.prioridad.contains("Crítico", ignoreCase = true)
+
     Card(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp).clickable(onClick = onClick),
-        elevation = CardDefaults.cardElevation(4.dp)
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp)
+            .clickable(onClick = onClick),
+        elevation = CardDefaults.cardElevation(if (esCritico) 8.dp else 4.dp),
+        border = if (esCritico) BorderStroke(2.dp, Color(0xFFD32F2F)) else null,
+        colors = CardDefaults.cardColors(
+            containerColor = if (esCritico) Color(0xFFFFF0F0) else MaterialTheme.colorScheme.surface
+        )
     ) {
         Column {
-            if (reporte.fotoUrlCloud != null) {
+            if (!reporte.fotoUrlCloud.isNullOrBlank()) {
                 AsyncImage(
                     model = reporte.fotoUrlCloud,
                     contentDescription = "Imagen del reporte ${reporte.titulo}",
-                    modifier = Modifier.fillMaxWidth().height(150.dp),
+                    modifier = Modifier.fillMaxWidth().height(180.dp),
                     contentScale = ContentScale.Crop
                 )
-            } else {
-                reporte.fotoBase64?.let { base64 ->
-                    EcoConnectImageManager.convertirBase64ABitmap(base64)?.let { bmp ->
-                        Image(
-                            bitmap = bmp.asImageBitmap(),
-                            contentDescription = "Imagen del reporte ${reporte.titulo}",
-                            modifier = Modifier.fillMaxWidth().height(150.dp),
-                            contentScale = ContentScale.Crop
-                        )
-                    }
+            } else if (!reporte.fotoPathLocal.isNullOrBlank() && java.io.File(reporte.fotoPathLocal).exists()) {
+                AsyncImage(
+                    model = java.io.File(reporte.fotoPathLocal),
+                    contentDescription = "Imagen local del reporte ${reporte.titulo}",
+                    modifier = Modifier.fillMaxWidth().height(180.dp),
+                    contentScale = ContentScale.Crop
+                )
+            } else if (!reporte.fotoBase64.isNullOrBlank()) {
+                EcoConnectImageManager.convertirBase64ABitmap(reporte.fotoBase64)?.let { bmp ->
+                    Image(
+                        bitmap = bmp.asImageBitmap(),
+                        contentDescription = "Imagen del reporte ${reporte.titulo}",
+                        modifier = Modifier.fillMaxWidth().height(180.dp),
+                        contentScale = ContentScale.Crop
+                    )
                 }
             }
 
             Column(modifier = Modifier.padding(16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(reporte.titulo, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                    Badge(containerColor = when(reporte.prioridad) { "Urgente" -> Color.Red; "Alta" -> Color(0xFFFF9800); else -> Color.Gray }) {
-                        Text(reporte.prioridad, color = Color.White, modifier = Modifier.padding(4.dp))
+                    Text(
+                        reporte.titulo,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Badge(containerColor = if (esCritico) Color(0xFFD32F2F) else when(reporte.prioridad) { "Alta" -> Color(0xFFFF9800); else -> Color.Gray }) {
+                        Text(if (esCritico) "🚨 REPORTE CRÍTICO" else reporte.prioridad, color = Color.White, modifier = Modifier.padding(4.dp))
                     }
                 }
+                Spacer(modifier = Modifier.height(4.dp))
                 Text(reporte.descripcion, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.AutoMirrored.Filled.Label, null, Modifier.size(16.dp))
+                    Icon(Icons.AutoMirrored.Filled.Label, null, Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
                     Text(" ${reporte.categoria}", style = MaterialTheme.typography.labelSmall)
                     Spacer(modifier = Modifier.width(16.dp))
-                    Icon(Icons.Default.LocationOn, null, Modifier.size(16.dp))
-                    Text(" ${reporte.ubicacionTexto}", style = MaterialTheme.typography.labelSmall, maxLines = 1)
+                    Icon(Icons.Default.LocationOn, null, Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+                    Text(" Zona: ${reporte.ubicacionTexto}", style = MaterialTheme.typography.labelSmall, maxLines = 1, fontWeight = FontWeight.SemiBold)
                 }
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     TextButton(onClick = onVotar) {
-                        Icon(Icons.Default.ThumbUp, null, Modifier.size(18.dp))
+                        Icon(Icons.Default.Favorite, null, Modifier.size(18.dp), tint = Color.Red)
                         Text(" Apoyar (${reporte.votosApoyo})", modifier = Modifier.padding(start = 4.dp))
                     }
                     Spacer(modifier = Modifier.weight(1f))
@@ -1058,103 +1131,39 @@ fun VistaSimuladorFDroidEngine(onVolver: () -> Unit) {
     }
 }
 
-data class PuntoRecoleccion(
-    val nombre: String,
-    val tipo: String,
-    val direccion: String,
-    val horario: String,
-    val estado: String,
-    val materiales: List<String>,
-    val distancia: String
-)
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun VistaMapaSimuladoEngine(reportes: List<ReporteEntity>, onVolver: () -> Unit) {
     var queryBusqueda by remember { mutableStateOf("") }
-    var categoriaFiltro by remember { mutableStateOf("Todos") }
+    var categoriaFiltro by remember { mutableStateOf("Todas") }
 
-    val puntosRecoleccion = remember {
-        listOf(
-            PuntoRecoleccion(
-                nombre = "Centro de Acopio y Reciclaje Tecmilenio",
-                tipo = "Centro de Reciclaje",
-                direccion = "Av. de las Industrias #1110, Zona Norte",
-                horario = "Lun - Vie: 8:00 AM - 6:00 PM",
-                estado = "Abierto",
-                materiales = listOf("PET", "Aluminio", "Cartón", "Electrónicos"),
-                distancia = "A 0.8 km"
-            ),
-            PuntoRecoleccion(
-                nombre = "Módulo Verde Parque Central",
-                tipo = "Punto Comunitario",
-                direccion = "Av. Universidad y Calle 24a",
-                horario = "Lun - Sáb: 9:00 AM - 5:00 PM",
-                estado = "Abierto",
-                materiales = listOf("Vidrio", "Pilas", "Aceite Usado"),
-                distancia = "A 1.5 km"
-            ),
-            PuntoRecoleccion(
-                nombre = "Estación Ecológica La Junta",
-                tipo = "Punto de Depósito 24H",
-                direccion = "Calle La Junta #450, Col. Centro",
-                horario = "24 Horas",
-                estado = "Abierto 24H",
-                materiales = listOf("Basura General", "Contenedores Plásticos"),
-                distancia = "A 2.3 km"
-            ),
-            PuntoRecoleccion(
-                nombre = "Centro de Transferencia RSU Norte",
-                tipo = "Planta de Tratamiento",
-                direccion = "Km 5 Carretera a Juárez",
-                horario = "Lun - Sáb: 7:00 AM - 4:00 PM",
-                estado = "Cierra Pronto",
-                materiales = listOf("Escombro", "Llantas", "Chatarra"),
-                distancia = "A 4.1 km"
-            )
-        )
-    }
-
-    val puntosFiltrados = puntosRecoleccion.filter { p ->
-        (categoriaFiltro == "Todos" || p.materiales.contains(categoriaFiltro) || p.tipo == categoriaFiltro) &&
-        (p.nombre.contains(queryBusqueda, ignoreCase = true) || p.direccion.contains(queryBusqueda, ignoreCase = true))
+    val reportesFiltrados = reportes.filter { r ->
+        (categoriaFiltro == "Todas" || r.categoria.equals(categoriaFiltro, ignoreCase = true)) &&
+        (r.titulo.contains(queryBusqueda, ignoreCase = true) ||
+         r.descripcion.contains(queryBusqueda, ignoreCase = true) ||
+         r.ubicacionTexto.contains(queryBusqueda, ignoreCase = true))
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Puntos de Recolección Cerca de Ti") },
+                title = { Text("Directorio de Zonas Reportadas") },
                 navigationIcon = { IconButton(onClick = onVolver) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver") } }
             )
         }
     ) { padding ->
         Column(modifier = Modifier.padding(padding).padding(16.dp).fillMaxSize()) {
-            if (reportes.isNotEmpty()) {
-                Surface(
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
-                    color = MaterialTheme.colorScheme.primaryContainer,
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    Text(
-                        "📍 Conectado con ${reportes.size} incidencias reportadas en tu zona",
-                        modifier = Modifier.padding(8.dp),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                }
-            }
-
             OutlinedTextField(
                 value = queryBusqueda,
                 onValueChange = { queryBusqueda = it },
                 modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("Buscar centro o dirección...") },
+                placeholder = { Text("Buscar por zona, colonia o título...") },
                 leadingIcon = { Icon(Icons.Default.Search, null) },
                 singleLine = true
             )
             
             Spacer(modifier = Modifier.height(12.dp))
-            val cats = listOf("Todos", "PET", "Aluminio", "Vidrio", "Pilas", "Cartón")
+            val cats = listOf("Todas", "Basura", "Fuga Agua", "Aire", "Ruidos")
             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(cats) { c ->
                     BotonChipBorde(texto = c, seleccionado = categoriaFiltro == c) { categoriaFiltro = c }
@@ -1163,54 +1172,67 @@ fun VistaMapaSimuladoEngine(reportes: List<ReporteEntity>, onVolver: () -> Unit)
             
             Spacer(modifier = Modifier.height(16.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Directorio de Zonas Ecológicas", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text("Zonas e Incidencias de la Comunidad", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.weight(1f))
-                Text("${puntosFiltrados.size} lugares", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                Text("${reportesFiltrados.size} reportes", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
             }
             Spacer(modifier = Modifier.height(8.dp))
 
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.weight(1f)) {
-                items(puntosFiltrados) { punto ->
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.Recycling, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(28.dp))
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(punto.nombre, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                                    Text(punto.tipo, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
-                                }
-                                SuggestionChip(
-                                    onClick = {},
-                                    label = { Text(punto.distancia, style = MaterialTheme.typography.labelSmall) }
-                                )
-                            }
-                            
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.Place, null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(punto.direccion, style = MaterialTheme.typography.bodySmall)
-                            }
-                            
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.Schedule, null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text("${punto.horario} • ${punto.estado}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary)
-                            }
+            if (reportesFiltrados.isEmpty()) {
+                Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    Text("No se encontraron incidencias en esta zona.", textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            } else {
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.weight(1f)) {
+                    items(reportesFiltrados) { reporte ->
+                        val esCritico = reporte.prioridad.contains("Urgente", ignoreCase = true) || reporte.prioridad.contains("Crítico", ignoreCase = true)
 
-                            Spacer(modifier = Modifier.height(8.dp))
-                            LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                items(punto.materiales) { mat ->
-                                    AssistChip(
-                                        onClick = {},
-                                        label = { Text(mat, style = MaterialTheme.typography.labelSmall) },
-                                        modifier = Modifier.height(28.dp)
-                                    )
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            border = if (esCritico) BorderStroke(1.5.dp, Color.Red) else null,
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (esCritico) Color(0xFFFFF0F0) else MaterialTheme.colorScheme.surfaceVariant
+                            )
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.Place, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(28.dp))
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(reporte.titulo, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                                        Text(reporte.categoria, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                                    }
+                                    Badge(containerColor = if (esCritico) Color.Red else Color.Gray) {
+                                        Text(reporte.prioridad, color = Color.White, modifier = Modifier.padding(4.dp))
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Surface(
+                                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                                    shape = RoundedCornerShape(8.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Row(modifier = Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(Icons.Default.LocationOn, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            "Zona registrada: ${reporte.ubicacionTexto}",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                                        )
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(reporte.descripcion, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
+
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text("Por: ${reporte.autorNombre}", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                                    Spacer(modifier = Modifier.weight(1f))
+                                    Text("👍 ${reporte.votosApoyo} apoyos", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
                                 }
                             }
                         }
