@@ -25,3 +25,5 @@ val DeuteranopiaPrimary = Color(0xFF1976D2) // Azul para compensar verde
 val DeuteranopiaSecondary = Color(0xFFFFA000)
 val ProtanopiaPrimary = Color(0xFF5D4037)
 val ProtanopiaSecondary = Color(0xFFFBC02D)
+val TritanopiaPrimary = Color(0xFF00796B) // Teal para compensar azul-amarillo
+val TritanopiaSecondary = Color(0xFFD32F2F)

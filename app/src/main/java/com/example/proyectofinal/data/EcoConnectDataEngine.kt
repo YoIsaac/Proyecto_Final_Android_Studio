@@ -117,6 +117,9 @@ interface ReporteDao {
     @Query("UPDATE tabla_reportes_ambientales SET votos_apoyo = votos_apoyo + 1 WHERE id = :id")
     fun incrementarVotos(id: String)
 
+    @Query("UPDATE tabla_reportes_ambientales SET votos_apoyo = CASE WHEN votos_apoyo > 0 THEN votos_apoyo - 1 ELSE 0 END WHERE id = :id")
+    fun decrementarVotos(id: String)
+
     @Query("UPDATE tabla_reportes_ambientales SET sincronizado_cloud = 1 WHERE id = :id")
     fun marcarComoSincronizado(id: String)
 

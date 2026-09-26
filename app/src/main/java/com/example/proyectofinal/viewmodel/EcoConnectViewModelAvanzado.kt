@@ -280,12 +280,29 @@ class EcoConnectViewModelAvanzado(
         }
     }
 
-    fun aplicarVotoComunitario(id: String) {
+    val reportesApoyadosPorUsuario = mutableStateSetOf<String>()
+    var esLecturaVozActiva by mutableStateOf(true)
+
+    fun aplicarVotoComunitario(id: String, context: android.content.Context? = null) {
         viewModelScope.launch {
-            repository.apoyarReporte(id, usuarioEmail)
-            puntosAcumulados += 5
-            totalApoyosUsuario += 1
-            checkBadges()
+            if (reportesApoyadosPorUsuario.contains(id)) {
+                reportesApoyadosPorUsuario.remove(id)
+                repository.quitarApoyoReporte(id)
+                puntosAcumulados = (puntosAcumulados - 5).coerceAtLeast(0)
+                if (totalApoyosUsuario > 0) totalApoyosUsuario -= 1
+                context?.let {
+                    android.widget.Toast.makeText(it, "Removiste tu apoyo de esta publicación 🤍", android.widget.Toast.LENGTH_SHORT).show()
+                }
+            } else {
+                reportesApoyadosPorUsuario.add(id)
+                repository.apoyarReporte(id, usuarioEmail)
+                puntosAcumulados += 5
+                totalApoyosUsuario += 1
+                checkBadges()
+                context?.let {
+                    android.widget.Toast.makeText(it, "¡Gracias por tu apoyo! ❤️ (+5 EcoPuntos)", android.widget.Toast.LENGTH_SHORT).show()
+                }
+            }
         }
     }
 
@@ -347,6 +364,10 @@ class EcoConnectViewModelAvanzado(
             esAltoContraste = nuevo
             settingsRepository?.setAltoContraste(nuevo)
         }
+    }
+
+    fun toggleLecturaVoz() {
+        esLecturaVozActiva = !esLecturaVozActiva
     }
 
     fun cambiarTipoDaltonismo(tipo: String) {

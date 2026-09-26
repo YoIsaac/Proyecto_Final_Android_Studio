@@ -44,6 +44,11 @@ private val ProtanopiaColorScheme = lightColorScheme(
     secondary = ProtanopiaSecondary
 )
 
+private val TritanopiaColorScheme = lightColorScheme(
+    primary = TritanopiaPrimary,
+    secondary = TritanopiaSecondary
+)
+
 @Composable
 fun ProyectoFinalTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
@@ -56,6 +61,7 @@ fun ProyectoFinalTheme(
         highContrast -> HighContrastColorScheme
         tipoDaltonismo == "Deuteranopia" -> DeuteranopiaColorScheme
         tipoDaltonismo == "Protanopia" -> ProtanopiaColorScheme
+        tipoDaltonismo == "Tritanopia" -> TritanopiaColorScheme
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val context = LocalContext.current
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)

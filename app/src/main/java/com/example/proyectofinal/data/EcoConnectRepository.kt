@@ -298,6 +298,10 @@ class EcoConnectRepository(
         )
     }
 
+    suspend fun quitarApoyoReporte(idReporte: String) = withContext(Dispatchers.IO) {
+        database.reporteDao().decrementarVotos(idReporte)
+    }
+
     suspend fun agregarComentario(reporteId: String, autor: String, emailUsuario: String, mensaje: String) = withContext(Dispatchers.IO) {
         val nuevoComentario = ComentarioEntity(
             reporteId = reporteId,

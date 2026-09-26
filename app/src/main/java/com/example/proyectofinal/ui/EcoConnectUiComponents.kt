@@ -113,13 +113,16 @@ fun PantallaDispatcherCentral(viewModel: EcoConnectViewModelAvanzado, windowSize
                         viewModel.destinoActual = EcoNavegacionDestino.DETALLE_REPORTE
                     }
                 )
-                EcoNavegacionDestino.DETALLE_REPORTE -> VistaDetalleReporteEngine(
-                    reporte = viewModel.reporteActivoSeleccionado,
-                    onVolver = { viewModel.destinoActual = EcoNavegacionDestino.DASHBOARD_FEED },
-                    onVotar = { viewModel.aplicarVotoComunitario(viewModel.reporteActivoSeleccionado?.id ?: "") },
-                    onComentar = { msg -> viewModel.agregarComentarioAReporte(viewModel.reporteActivoSeleccionado?.id ?: "", msg) },
-                    viewModel = viewModel
-                )
+                EcoNavegacionDestino.DETALLE_REPORTE -> {
+                    val context = LocalContext.current
+                    VistaDetalleReporteEngine(
+                        reporte = viewModel.reporteActivoSeleccionado,
+                        onVolver = { viewModel.destinoActual = EcoNavegacionDestino.DASHBOARD_FEED },
+                        onVotar = { viewModel.aplicarVotoComunitario(viewModel.reporteActivoSeleccionado?.id ?: "", context) },
+                        onComentar = { msg -> viewModel.agregarComentarioAReporte(viewModel.reporteActivoSeleccionado?.id ?: "", msg) },
+                        viewModel = viewModel
+                    )
+                }
                 EcoNavegacionDestino.CREAR_REPORTE_CAMARA -> VistaCrearReporteCamaraEngine(
                     onReporteCreado = { t, d, c, u, p, uri ->
                         viewModel.guardarNuevoReporte(t, d, c, u, p, null, uri)
@@ -403,11 +406,13 @@ fun VistaDashboardEngine(
     onNavigate: (EcoNavegacionDestino) -> Unit,
     onSelectReporte: (ReporteEntity) -> Unit
 ) {
+    val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
     val categoriaActiva by viewModel.categoriaFiltro.collectAsState()
     var busqueda by remember { mutableStateOf("") }
     val esPantallaAncha = windowSize.widthSizeClass >= WindowWidthSizeClass.Medium
     var mostrarSOS by remember { mutableStateOf(false) }
+    var mostrarAjustesRapidos by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -422,6 +427,9 @@ fun VistaDashboardEngine(
                     }
                     IconButton(onClick = { onNavigate(EcoNavegacionDestino.HISTORIAL_NOTIFICACIONES) }) {
                         Icon(Icons.Default.Notifications, contentDescription = stringResource(R.string.notifications))
+                    }
+                    IconButton(onClick = { mostrarAjustesRapidos = true }) {
+                        Icon(Icons.Default.Settings, contentDescription = stringResource(R.string.settings))
                     }
                     IconButton(onClick = { onNavigate(EcoNavegacionDestino.PERFIL_ESTADISTICAS) }) {
                         Icon(Icons.Default.AccountCircle, contentDescription = stringResource(R.string.profile))
@@ -464,9 +472,22 @@ fun VistaDashboardEngine(
                     icon = { Icon(Icons.Default.EmojiEvents, null) },
                     label = { Text("Insignias") }
                 )
+                NavigationBarItem(
+                    selected = false,
+                    onClick = { onNavigate(EcoNavegacionDestino.CONFIGURACION_SISTEMA) },
+                    icon = { Icon(Icons.Default.Settings, null) },
+                    label = { Text(stringResource(R.string.settings)) }
+                )
             }
         }
     ) { padding ->
+        if (mostrarAjustesRapidos) {
+            DialogoAjustesAccesibilidad(
+                viewModel = viewModel,
+                onDismiss = { mostrarAjustesRapidos = false }
+            )
+        }
+
         if (mostrarSOS) {
             var tituloCritico by remember { mutableStateOf("Fuga Severa / Contaminación Urgente") }
             var zonaCritica by remember { mutableStateOf("Av. Central y Calle 5a") }
@@ -566,7 +587,8 @@ fun VistaDashboardEngine(
                                 TarjetaReporteEngine(
                                     reporte = reporte,
                                     onClick = { onSelectReporte(reporte) },
-                                    onVotar = { viewModel.aplicarVotoComunitario(reporte.id) }
+                                    onVotar = { viewModel.aplicarVotoComunitario(reporte.id, context) },
+                                    yaApoyado = viewModel.reportesApoyadosPorUsuario.contains(reporte.id)
                                 )
                             }
                         }
@@ -601,7 +623,8 @@ fun VistaDashboardEngine(
                                         TarjetaReporteEngine(
                                             reporte = reporte,
                                             onClick = { onSelectReporte(reporte) },
-                                            onVotar = { viewModel.aplicarVotoComunitario(reporte.id) }
+                                            onVotar = { viewModel.aplicarVotoComunitario(reporte.id, context) },
+                                            yaApoyado = viewModel.reportesApoyadosPorUsuario.contains(reporte.id)
                                         )
                                     }
                                 )
@@ -625,7 +648,12 @@ fun BotonChipBorde(texto: String, seleccionado: Boolean, onClick: () -> Unit) {
 }
 
 @Composable
-fun TarjetaReporteEngine(reporte: ReporteEntity, onClick: () -> Unit, onVotar: () -> Unit) {
+fun TarjetaReporteEngine(
+    reporte: ReporteEntity,
+    onClick: () -> Unit,
+    onVotar: () -> Unit,
+    yaApoyado: Boolean = false
+) {
     val esCritico = reporte.prioridad.contains("Urgente", ignoreCase = true) || reporte.prioridad.contains("Crítico", ignoreCase = true)
 
     Card(
@@ -689,9 +717,23 @@ fun TarjetaReporteEngine(reporte: ReporteEntity, onClick: () -> Unit, onVotar: (
                 }
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    TextButton(onClick = onVotar) {
-                        Icon(Icons.Default.Favorite, null, Modifier.size(18.dp), tint = Color.Red)
-                        Text(" Apoyar (${reporte.votosApoyo})", modifier = Modifier.padding(start = 4.dp))
+                    TextButton(
+                        onClick = onVotar,
+                        colors = ButtonDefaults.textButtonColors(
+                            contentColor = if (yaApoyado) Color(0xFFD32F2F) else MaterialTheme.colorScheme.primary
+                        )
+                    ) {
+                        Icon(
+                            imageVector = if (yaApoyado) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                            contentDescription = if (yaApoyado) "Apoyado" else "Apoyar",
+                            modifier = Modifier.size(20.dp),
+                            tint = if (yaApoyado) Color(0xFFD32F2F) else Color.Red
+                        )
+                        Text(
+                            if (yaApoyado) " Apoyado (${reporte.votosApoyo})" else " Apoyar (${reporte.votosApoyo})",
+                            modifier = Modifier.padding(start = 4.dp),
+                            fontWeight = if (yaApoyado) FontWeight.Bold else FontWeight.Normal
+                        )
                     }
                     Spacer(modifier = Modifier.weight(1f))
                     Text(reporte.fechaCreacion, style = MaterialTheme.typography.labelSmall)
@@ -785,9 +827,21 @@ fun VistaDetalleReporteEngine(
                 }
                 Text("Autor: ${reporte.autorNombre} (${reporte.autorEmail})", style = MaterialTheme.typography.bodySmall)
                 Spacer(modifier = Modifier.height(16.dp))
-                Button(onClick = onVotar, modifier = Modifier.fillMaxWidth()) {
-                    Icon(Icons.Default.Favorite, null)
-                    Text(" Apoyar este reporte (${reporte.votosApoyo} votos)")
+                val yaApoyado = viewModel.reportesApoyadosPorUsuario.contains(reporte.id)
+                Button(
+                    onClick = onVotar,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (yaApoyado) Color(0xFFD32F2F) else MaterialTheme.colorScheme.primary
+                    )
+                ) {
+                    Icon(
+                        imageVector = if (yaApoyado) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                        contentDescription = if (yaApoyado) "Apoyado" else "Apoyar",
+                        tint = Color.White
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(if (yaApoyado) " Apoyado ❤️ (${reporte.votosApoyo} votos)" else " Apoyar este reporte (${reporte.votosApoyo} votos)")
                 }
                 HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
                 Text("Comentarios Comunitarios", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
@@ -985,6 +1039,12 @@ fun VistaPerfilEngine(viewModel: EcoConnectViewModelAvanzado, onVolver: () -> Un
                             contentDescription = "Alternar Modo Oscuro/Claro"
                         )
                     }
+                    IconButton(onClick = { viewModel.destinoActual = EcoNavegacionDestino.CONFIGURACION_SISTEMA }) {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = stringResource(R.string.settings)
+                        )
+                    }
                 }
             ) 
         }
@@ -995,7 +1055,32 @@ fun VistaPerfilEngine(viewModel: EcoConnectViewModelAvanzado, onVolver: () -> Un
                 Text(viewModel.usuarioNombre, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
                 Text(viewModel.usuarioEmail, style = MaterialTheme.typography.bodyMedium)
                 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { viewModel.destinoActual = EcoNavegacionDestino.CONFIGURACION_SISTEMA },
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(16.dp)
+                    ) {
+                        Icon(Icons.Default.Settings, null, tint = MaterialTheme.colorScheme.primary)
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Ajustes de Accesibilidad", fontWeight = FontWeight.Bold)
+                            Text(
+                                "Alto Contraste: ${if (viewModel.esAltoContraste) "ON" else "OFF"} | Daltonismo: ${if (viewModel.tipoDaltonismo != "None") viewModel.tipoDaltonismo else "OFF"}",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                        Icon(Icons.AutoMirrored.Filled.ArrowForward, null)
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
                 
                 Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
                     Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -1273,53 +1358,190 @@ fun VistaNotificacionesEngine(viewModel: EcoConnectViewModelAvanzado, onVolver: 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun VistaConfiguracionEngine(viewModel: EcoConnectViewModelAvanzado, onVolver: () -> Unit) {
+    val esDaltonismoActivo = viewModel.tipoDaltonismo != "None"
+
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Ajustes y Accesibilidad WCAG 2.1") }, navigationIcon = { IconButton(onClick = onVolver) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver") } }) }
+        topBar = {
+            TopAppBar(
+                title = { Text("Ajustes y Accesibilidad WCAG 2.1") },
+                navigationIcon = {
+                    IconButton(onClick = onVolver) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver")
+                    }
+                }
+            )
+        }
     ) { padding ->
-        Column(modifier = Modifier.padding(padding).fillMaxSize().padding(20.dp).verticalScroll(rememberScrollState())) {
+        Column(
+            modifier = Modifier
+                .padding(padding)
+                .fillMaxSize()
+                .padding(20.dp)
+                .verticalScroll(rememberScrollState())
+        ) {
             
-            Text("Ajustes de Apariencia y Accesibilidad", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+            Text(
+                "Ajustes de Apariencia y Accesibilidad",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
             Spacer(modifier = Modifier.height(12.dp))
 
             // Switch Modo Oscuro
             Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(16.dp)) {
-                    Icon(if (viewModel.esModoOscuro) Icons.Default.DarkMode else Icons.Default.LightMode, null, tint = MaterialTheme.colorScheme.primary)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(16.dp)
+                ) {
+                    Icon(
+                        if (viewModel.esModoOscuro) Icons.Default.DarkMode else Icons.Default.LightMode,
+                        null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
                     Spacer(modifier = Modifier.width(12.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text("Modo Oscuro / Claro", fontWeight = FontWeight.Bold)
-                        Text(if (viewModel.esModoOscuro) "Tema Oscuro Activo 🌙" else "Tema Claro Activo ☀️", style = MaterialTheme.typography.bodySmall)
+                        Text(
+                            if (viewModel.esModoOscuro) "ACTIVADO - Tema Oscuro 🌙" else "DESACTIVADO - Tema Claro ☀️",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (viewModel.esModoOscuro) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
-                    Switch(checked = viewModel.esModoOscuro, onCheckedChange = { viewModel.toggleModoOscuro() })
+                    Switch(
+                        checked = viewModel.esModoOscuro,
+                        onCheckedChange = { viewModel.toggleModoOscuro() }
+                    )
                 }
             }
 
-            // Switch Alto Contraste
-            Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(16.dp)) {
-                    Icon(Icons.Default.Visibility, null, tint = MaterialTheme.colorScheme.primary)
+            // Switch Alto Contraste (ACTIVAR Y DESACTIVAR)
+            Card(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = if (viewModel.esAltoContraste) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
+                )
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(16.dp)
+                ) {
+                    Icon(Icons.Default.Contrast, null, tint = MaterialTheme.colorScheme.primary)
                     Spacer(modifier = Modifier.width(12.dp))
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("Modo de Alto Contraste", fontWeight = FontWeight.Bold)
-                        Text("Contraste extremo > 7:1 para baja visión", style = MaterialTheme.typography.bodySmall)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("Modo Alto Contraste", fontWeight = FontWeight.Bold)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Surface(
+                                color = if (viewModel.esAltoContraste) Color(0xFFFFD600) else Color.Gray,
+                                shape = RoundedCornerShape(4.dp)
+                            ) {
+                                Text(
+                                    text = if (viewModel.esAltoContraste) " ACTIVADO " else " DESACTIVADO ",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Color.Black,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                        Text(
+                            "Contraste extremo WCAG AAA (> 7:1) para baja visión.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
                     }
-                    Switch(checked = viewModel.esAltoContraste, onCheckedChange = { viewModel.toggleAltoContraste() })
+                    Switch(
+                        checked = viewModel.esAltoContraste,
+                        onCheckedChange = { viewModel.toggleAltoContraste() }
+                    )
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
-            Text("Filtros de Daltonismo (Matriz de Color Dinámica)", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            Spacer(modifier = Modifier.height(8.dp))
-            val opcionesDaltonismo = listOf("None" to "Normal (Sin filtro)", "Deuteranopia" to "Deuteranopia (Verde-Rojo)", "Protanopia" to "Protanopia (Rojo-Verde)", "Tritanopia" to "Tritanopia (Azul-Amarillo)")
-            opcionesDaltonismo.forEach { (opcion, label) ->
-                Card(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp).clickable { viewModel.cambiarTipoDaltonismo(opcion) },
-                    colors = CardDefaults.cardColors(containerColor = if (viewModel.tipoDaltonismo == opcion) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant)
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(12.dp)) {
-                        RadioButton(selected = viewModel.tipoDaltonismo == opcion, onClick = { viewModel.cambiarTipoDaltonismo(opcion) })
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(label, fontWeight = if (viewModel.tipoDaltonismo == opcion) FontWeight.Bold else FontWeight.Normal)
+            // Switch Daltonismo (ACTIVAR Y DESACTIVAR)
+            Card(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = if (esDaltonismoActivo) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceVariant
+                )
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Palette, null, tint = MaterialTheme.colorScheme.primary)
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text("Ajustes de Daltonismo", fontWeight = FontWeight.Bold)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Surface(
+                                    color = if (esDaltonismoActivo) MaterialTheme.colorScheme.primary else Color.Gray,
+                                    shape = RoundedCornerShape(4.dp)
+                                ) {
+                                    Text(
+                                        text = if (esDaltonismoActivo) " ACTIVADO " else " DESACTIVADO ",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = Color.White,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+                            Text(
+                                if (esDaltonismoActivo) "Filtro activo: ${viewModel.tipoDaltonismo} 🎨" else "Paleta de color estándar",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                        Switch(
+                            checked = esDaltonismoActivo,
+                            onCheckedChange = { activo ->
+                                if (activo) {
+                                    viewModel.cambiarTipoDaltonismo("Deuteranopia")
+                                } else {
+                                    viewModel.cambiarTipoDaltonismo("None")
+                                }
+                            }
+                        )
+                    }
+
+                    if (esDaltonismoActivo) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                        Text(
+                            "Selecciona el tipo de daltonismo:",
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        val opcionesDaltonismo = listOf(
+                            "Deuteranopia" to "Deuteranopía (Deficiencia Verde-Rojo)",
+                            "Protanopia" to "Protanopía (Deficiencia Rojo-Verde)",
+                            "Tritanopia" to "Tritanopía (Deficiencia Azul-Amarillo)"
+                        )
+
+                        opcionesDaltonismo.forEach { (opcion, label) ->
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp)
+                                    .clickable { viewModel.cambiarTipoDaltonismo(opcion) },
+                                colors = CardDefaults.cardColors(
+                                    containerColor = if (viewModel.tipoDaltonismo == opcion) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface
+                                )
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.padding(12.dp)
+                                ) {
+                                    RadioButton(
+                                        selected = viewModel.tipoDaltonismo == opcion,
+                                        onClick = { viewModel.cambiarTipoDaltonismo(opcion) }
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        label,
+                                        fontWeight = if (viewModel.tipoDaltonismo == opcion) FontWeight.Bold else FontWeight.Normal
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -1389,6 +1611,145 @@ fun VistaConfiguracionEngine(viewModel: EcoConnectViewModelAvanzado, onVolver: (
             Text("Versión: 3.2.0-AAA-REALTIME", style = MaterialTheme.typography.labelSmall, modifier = Modifier.align(Alignment.CenterHorizontally))
         }
     }
+}
+
+@Composable
+fun DialogoAjustesAccesibilidad(
+    viewModel: EcoConnectViewModelAvanzado,
+    onDismiss: () -> Unit
+) {
+    val esDaltonismoActivo = viewModel.tipoDaltonismo != "None"
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Settings, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Ajustes de Accesibilidad", fontWeight = FontWeight.Bold)
+            }
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .verticalScroll(rememberScrollState())
+                    .fillMaxWidth()
+            ) {
+                Text(
+                    "Personaliza la experiencia visual según tus necesidades:",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Modo Oscuro
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp)
+                ) {
+                    Icon(
+                        if (viewModel.esModoOscuro) Icons.Default.DarkMode else Icons.Default.LightMode,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Modo Oscuro", fontWeight = FontWeight.SemiBold)
+                        Text(
+                            if (viewModel.esModoOscuro) "Activado" else "Desactivado",
+                            style = MaterialTheme.typography.labelSmall
+                        )
+                    }
+                    Switch(
+                        checked = viewModel.esModoOscuro,
+                        onCheckedChange = { viewModel.toggleModoOscuro() }
+                    )
+                }
+
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+                // Alto Contraste
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp)
+                ) {
+                    Icon(Icons.Default.Contrast, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Alto Contraste", fontWeight = FontWeight.SemiBold)
+                        Text(
+                            if (viewModel.esAltoContraste) "Activado (> 7:1)" else "Desactivado",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (viewModel.esAltoContraste) Color(0xFFFFD600) else Color.Unspecified
+                        )
+                    }
+                    Switch(
+                        checked = viewModel.esAltoContraste,
+                        onCheckedChange = { viewModel.toggleAltoContraste() }
+                    )
+                }
+
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+                // Daltonismo
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp)
+                ) {
+                    Icon(Icons.Default.Palette, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Modo Daltonismo", fontWeight = FontWeight.SemiBold)
+                        Text(
+                            if (esDaltonismoActivo) viewModel.tipoDaltonismo else "Desactivado",
+                            style = MaterialTheme.typography.labelSmall
+                        )
+                    }
+                    Switch(
+                        checked = esDaltonismoActivo,
+                        onCheckedChange = { activo ->
+                            if (activo) viewModel.cambiarTipoDaltonismo("Deuteranopia") else viewModel.cambiarTipoDaltonismo("None")
+                        }
+                    )
+                }
+
+                if (esDaltonismoActivo) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    val opciones = listOf(
+                        "Deuteranopia" to "Deuteranopía (Verde-Rojo)",
+                        "Protanopia" to "Protanopía (Rojo-Verde)",
+                        "Tritanopia" to "Tritanopía (Azul-Amarillo)"
+                    )
+                    opciones.forEach { (opcion, label) ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { viewModel.cambiarTipoDaltonismo(opcion) }
+                                .padding(vertical = 4.dp, horizontal = 8.dp)
+                        ) {
+                            RadioButton(
+                                selected = viewModel.tipoDaltonismo == opcion,
+                                onClick = { viewModel.cambiarTipoDaltonismo(opcion) }
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(label, style = MaterialTheme.typography.bodyMedium)
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(onClick = onDismiss) {
+                Text("Aceptar")
+            }
+        }
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
