@@ -1,14 +1,9 @@
 ================================================================================
                        ECOCONNECT - DEMO VIDEO & PRESENTATION
 ================================================================================
-
-Aplicación: EcoConnect (Plataforma Colaborativa de Monitoreo y Reporte Ambiental)
-Equipo de Desarrollo: Isaac Betance y equipo
-Repositorio GitHub: https://github.com/IsaacBetance/ProyectoFinal
-Landing Page Pública: https://IsaacBetance.github.io/ProyectoFinal/landing-page/
-
+https://youtu.be/51pFKXxFRU0?si=ecx2cr6ZUrZMi8tO
 --------------------------------------------------------------------------------
-ENLACE AL VIDEO DEMOSTRATIVO
+ENLACE AL VIDEO DEMOSTRATIVO : https://youtu.be/51pFKXxFRU0?si=ecx2cr6ZUrZMi8tO
 --------------------------------------------------------------------------------
 YouTube / Vimeo / Google Drive URL:
 https://youtu.be/EcoConnectDemoFinal2026 (Reemplazar con el enlace final del video grabado)
