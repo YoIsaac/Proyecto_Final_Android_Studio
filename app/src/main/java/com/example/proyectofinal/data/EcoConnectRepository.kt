@@ -341,6 +341,7 @@ class EcoConnectRepository(
             kgCO2Evitados = if (categoria == "Reciclaje") 5.2 else 0.0
         )
 
+        Log.d("FIREBASE_TEST", "📢 Publicando en Room e INICIANDO SUBIDA A REALTIME DB para: '${nuevoReporte.titulo}' (ID: ${nuevoReporte.id})")
         database.reporteDao().insertarReporte(nuevoReporte)
         database.usuarioDao().sumarPuntos(autorEmail, 50)
         database.puntoHistorialDao().insertarEntrada(
@@ -355,6 +356,10 @@ class EcoConnectRepository(
             )
         )
 
+        // Subida directa e inmediata a Realtime DB
+        cloudSyncEngine.subirReporteARealtimeDatabase(nuevoReporte)
+        
+        // Subida a Firestore/Storage en segundo plano
         cloudSyncEngine.subirReporteAFirebase(nuevoReporte, imageUri)
 
         // Programar sincronización de fondo (Offline-First)

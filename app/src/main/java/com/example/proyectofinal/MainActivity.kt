@@ -59,15 +59,17 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // Test de Conexión Inmediata con Firebase Realtime Database al iniciar la app
+        // Test de Conexión Inicial directo a reportes_comunitarios/prueba_inicial
         try {
-            val dbRef = com.google.firebase.database.FirebaseDatabase.getInstance("https://proyecto-final-ecoconect-default-rtdb.firebaseio.com").reference
-            dbRef.child("test_conexion").setValue("Hola Firebase " + System.currentTimeMillis())
+            val databaseRef = com.google.firebase.database.FirebaseDatabase.getInstance("https://proyecto-final-ecoconect-default-rtdb.firebaseio.com")
+                .getReference("reportes_comunitarios")
+            
+            databaseRef.child("prueba_inicial").setValue(mapOf("mensaje" to "Conexion exitosa desde la app"))
                 .addOnSuccessListener {
-                    android.util.Log.d("FIREBASE_TEST", "¡CONEXIÓN EXITOSA EN MAINACTIVITY! Nodo 'test_conexion' creado/actualizado con éxito.")
+                    android.util.Log.d("FIREBASE_TEST", "¡CONEXIÓN EXITOSA EN MAINACTIVITY! Nodo 'reportes_comunitarios/prueba_inicial' creado con éxito.")
                 }
                 .addOnFailureListener { e ->
-                    android.util.Log.e("FIREBASE_TEST", "ERROR AL CONECTAR EN MAINACTIVITY: ${e.message}", e)
+                    android.util.Log.e("FIREBASE_TEST", "ERROR PRUEBA INICIAL: ${e.message}", e)
                 }
         } catch (e: Exception) {
             android.util.Log.e("FIREBASE_TEST", "EXCEPCIÓN EN MAINACTIVITY FIREBASE TEST: ${e.message}", e)
