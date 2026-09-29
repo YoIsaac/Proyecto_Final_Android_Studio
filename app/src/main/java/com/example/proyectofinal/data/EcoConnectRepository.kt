@@ -23,12 +23,22 @@ import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.*
 
+private const val FIREBASE_DATABASE_URL = "https://proyecto-final-ecoconect-default-rtdb.firebaseio.com"
+
 class EcoConnectCloudSyncEngine(
     private val database: EcoConnectRoomDatabase,
     private val context: Context
 ) {
     private val _estadoSincronizacion = MutableStateFlow("Sincronización Cloud Lista")
     val estadoSincronizacion: StateFlow<String> = _estadoSincronizacion
+
+    private fun obtenerRealtimeDatabase(): FirebaseDatabase {
+        return try {
+            FirebaseDatabase.getInstance(FIREBASE_DATABASE_URL)
+        } catch (e: Exception) {
+            FirebaseDatabase.getInstance()
+        }
+    }
 
     init {
         iniciarEscuchadorTiempoReal()
@@ -57,6 +67,7 @@ class EcoConnectCloudSyncEngine(
                 "email" to reporte.autorEmail,
                 "fecha" to reporte.fechaCreacion,
                 "fotoUrl" to cloudUrl,
+                "fotoBase64" to (reporte.fotoBase64 ?: ""),
                 "kgCO2" to reporte.kgCO2Evitados
             )
             
@@ -75,7 +86,7 @@ class EcoConnectCloudSyncEngine(
 
     fun subirReporteARealtimeDatabase(reporte: ReporteEntity) {
         try {
-            val realtimeDb = FirebaseDatabase.getInstance()
+            val realtimeDb = obtenerRealtimeDatabase()
             val ref = realtimeDb.getReference("reportes_comunitarios")
             
             val map = hashMapOf(
@@ -98,6 +109,12 @@ class EcoConnectCloudSyncEngine(
             )
             
             ref.child(reporte.id).setValue(map)
+                .addOnSuccessListener {
+                    _estadoSincronizacion.value = "Reporte publicado en Realtime Database"
+                }
+                .addOnFailureListener { err ->
+                    println("ERROR REALTIME DB: ${err.localizedMessage}")
+                }
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -110,7 +127,7 @@ class EcoConnectCloudSyncEngine(
         onError: (String) -> Unit = {}
     ) {
         try {
-            val realtimeDb = FirebaseDatabase.getInstance()
+            val realtimeDb = obtenerRealtimeDatabase()
             val ref = realtimeDb.getReference("usuarios")
             val userId = email.replace(".", "_").replace("@", "_at_")
 
@@ -139,7 +156,7 @@ class EcoConnectCloudSyncEngine(
 
     fun eliminarReporteDeFirebase(id: String) {
         try {
-            val realtimeDb = FirebaseDatabase.getInstance()
+            val realtimeDb = obtenerRealtimeDatabase()
             realtimeDb.getReference("reportes_comunitarios").child(id).removeValue()
 
             val db = FirebaseFirestore.getInstance()
@@ -152,7 +169,7 @@ class EcoConnectCloudSyncEngine(
 
     fun iniciarEscuchadorTiempoReal() {
         try {
-            val realtimeDb = FirebaseDatabase.getInstance()
+            val realtimeDb = obtenerRealtimeDatabase()
             val ref = realtimeDb.getReference("reportes_comunitarios")
             
             ref.addValueEventListener(object : ValueEventListener {
