@@ -58,6 +58,20 @@ class MainActivity : ComponentActivity() {
         
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        // Test de Conexión Inmediata con Firebase Realtime Database al iniciar la app
+        try {
+            val dbRef = com.google.firebase.database.FirebaseDatabase.getInstance("https://proyecto-final-ecoconect-default-rtdb.firebaseio.com").reference
+            dbRef.child("test_conexion").setValue("Hola Firebase " + System.currentTimeMillis())
+                .addOnSuccessListener {
+                    android.util.Log.d("FIREBASE_TEST", "¡CONEXIÓN EXITOSA EN MAINACTIVITY! Nodo 'test_conexion' creado/actualizado con éxito.")
+                }
+                .addOnFailureListener { e ->
+                    android.util.Log.e("FIREBASE_TEST", "ERROR AL CONECTAR EN MAINACTIVITY: ${e.message}", e)
+                }
+        } catch (e: Exception) {
+            android.util.Log.e("FIREBASE_TEST", "EXCEPCIÓN EN MAINACTIVITY FIREBASE TEST: ${e.message}", e)
+        }
         
         setContent {
             val windowSizeClass = calculateWindowSizeClass(this)

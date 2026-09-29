@@ -2,6 +2,7 @@
   "project_info": {
     "project_number": "1079652430071",
     "project_id": "proyecto-final-ecoconect",
+    "firebase_url": "https://proyecto-final-ecoconect-default-rtdb.firebaseio.com",
     "storage_bucket": "proyecto-final-ecoconect.firebasestorage.app"
   },
   "client": [
