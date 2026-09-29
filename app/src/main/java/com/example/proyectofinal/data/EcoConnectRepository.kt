@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
+import android.util.Log
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
@@ -79,8 +80,9 @@ class EcoConnectCloudSyncEngine(
             database.reporteDao().marcarComoSincronizado(reporte.id)
             _estadoSincronizacion.value = "Sincronizado con Firebase Cloud"
         } catch (e: Exception) {
+            Log.e("FIREBASE_TEST", "Error en Firestore/Storage: ${e.localizedMessage}")
             subirReporteARealtimeDatabase(reporte)
-            _estadoSincronizacion.value = "Sincronizado en Realtime DB (Modo Demo)"
+            _estadoSincronizacion.value = "Sincronizado en Realtime DB"
         }
     }
 
@@ -108,15 +110,18 @@ class EcoConnectCloudSyncEngine(
                 "kgCO2Evitados" to reporte.kgCO2Evitados
             )
             
+            Log.d("FIREBASE_TEST", "🚀 Enviando reporte a Realtime DB -> ID: ${reporte.id}, Título: ${reporte.titulo}")
+
             ref.child(reporte.id).setValue(map)
                 .addOnSuccessListener {
+                    Log.d("FIREBASE_TEST", "✅ ¡ÉXITO TOTAL! Reporte '${reporte.titulo}' guardado en Firebase Realtime Database bajo 'reportes_comunitarios/${reporte.id}'.")
                     _estadoSincronizacion.value = "Reporte publicado en Realtime Database"
                 }
                 .addOnFailureListener { err ->
-                    println("ERROR REALTIME DB: ${err.localizedMessage}")
+                    Log.e("FIREBASE_TEST", "❌ ERROR AL GUARDAR EN FIREBASE REALTIME DB: ${err.localizedMessage}", err)
                 }
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e("FIREBASE_TEST", "❌ EXCEPCIÓN en subirReporteARealtimeDatabase: ${e.localizedMessage}", e)
         }
     }
 
@@ -139,17 +144,22 @@ class EcoConnectCloudSyncEngine(
                 "plataforma" to "Android EcoConnect App"
             )
 
+            Log.d("FIREBASE_TEST", "🚀 Registrando usuario en Realtime DB: $email")
+
             ref.child(userId).setValue(usuarioData)
                 .addOnSuccessListener {
+                    Log.d("FIREBASE_TEST", "✅ Usuario '$email' guardado en Realtime DB.")
                     _estadoSincronizacion.value = "Usuario guardado en Realtime Database"
                     onSuccess()
                 }
                 .addOnFailureListener { e ->
-                    _estadoSincronizacion.value = "Realtime DB Sync Modo Demo"
+                    Log.e("FIREBASE_TEST", "❌ Error al guardar usuario: ${e.localizedMessage}", e)
+                    _estadoSincronizacion.value = "Realtime DB Sync Error"
                     onError(e.localizedMessage ?: "Error de conexión")
                 }
         } catch (e: Exception) {
-            _estadoSincronizacion.value = "Realtime DB Modo Demo"
+            Log.e("FIREBASE_TEST", "❌ Excepción en guardarUsuario: ${e.localizedMessage}", e)
+            _estadoSincronizacion.value = "Realtime DB Excepción"
             onError(e.localizedMessage ?: "Error de inicialización")
         }
     }
@@ -157,13 +167,21 @@ class EcoConnectCloudSyncEngine(
     fun eliminarReporteDeFirebase(id: String) {
         try {
             val realtimeDb = obtenerRealtimeDatabase()
+            Log.d("FIREBASE_TEST", "🗑️ Eliminando reporte '$id' de Realtime DB...")
+            
             realtimeDb.getReference("reportes_comunitarios").child(id).removeValue()
+                .addOnSuccessListener {
+                    Log.d("FIREBASE_TEST", "✅ Reporte '$id' borrado con éxito de Realtime DB.")
+                }
+                .addOnFailureListener { err ->
+                    Log.e("FIREBASE_TEST", "❌ Error al borrar reporte '$id': ${err.localizedMessage}")
+                }
 
             val db = FirebaseFirestore.getInstance()
             db.collection("reportes").document(id).delete()
             _estadoSincronizacion.value = "Reporte eliminado de Firebase Cloud"
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e("FIREBASE_TEST", "❌ Excepción en eliminarReporteDeFirebase: ${e.localizedMessage}", e)
         }
     }
 
@@ -171,9 +189,11 @@ class EcoConnectCloudSyncEngine(
         try {
             val realtimeDb = obtenerRealtimeDatabase()
             val ref = realtimeDb.getReference("reportes_comunitarios")
+            Log.d("FIREBASE_TEST", "🎧 Escuchador en tiempo real activo en 'reportes_comunitarios' (${FIREBASE_DATABASE_URL})")
             
             ref.addValueEventListener(object : ValueEventListener {
                 override fun onDataChange(snapshot: DataSnapshot) {
+                    Log.d("FIREBASE_TEST", "📩 DataChange recibido desde Firebase Realtime DB. Total de nodos: ${snapshot.childrenCount}")
                     GlobalScope.launch(Dispatchers.IO) {
                         val remoteIds = HashSet<String>()
 
