@@ -59,7 +59,27 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // Test de Conexión Inicial directo a reportes_comunitarios/prueba_inicial
+        // 1. Inicializar FirebaseApp de forma explícita primero
+        try {
+            if (com.google.firebase.FirebaseApp.getApps(this).isEmpty()) {
+                val options = com.google.firebase.FirebaseOptions.Builder()
+                    .setApplicationId("1:1079652430071:android:df10126ea1703b75ef23f2")
+                    .setApiKey("AIzaSyCkqrbCfDpOXYyUj_UEFW2w90ZsUgRze60")
+                    .setDatabaseUrl("https://proyecto-final-ecoconect-default-rtdb.firebaseio.com")
+                    .setProjectId("proyecto-final-ecoconect")
+                    .setStorageBucket("proyecto-final-ecoconect.firebasestorage.app")
+                    .build()
+                com.google.firebase.FirebaseApp.initializeApp(this, options)
+                android.util.Log.d("FIREBASE_TEST", "✅ FirebaseApp inicializado manualmente con FirebaseOptions.")
+            } else {
+                com.google.firebase.FirebaseApp.initializeApp(this)
+                android.util.Log.d("FIREBASE_TEST", "✅ FirebaseApp listo por defecto.")
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("FIREBASE_TEST", "❌ Error al inicializar FirebaseApp: ${e.message}", e)
+        }
+
+        // 2. Test de Conexión Inicial directo a reportes_comunitarios/prueba_inicial
         try {
             val databaseRef = com.google.firebase.database.FirebaseDatabase.getInstance("https://proyecto-final-ecoconect-default-rtdb.firebaseio.com")
                 .getReference("reportes_comunitarios")
