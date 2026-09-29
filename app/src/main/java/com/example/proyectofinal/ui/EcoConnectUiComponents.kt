@@ -675,13 +675,6 @@ fun TarjetaReporteEngine(
                     modifier = Modifier.fillMaxWidth().height(180.dp),
                     contentScale = ContentScale.Crop
                 )
-            } else if (!reporte.fotoPathLocal.isNullOrBlank() && java.io.File(reporte.fotoPathLocal).exists()) {
-                AsyncImage(
-                    model = java.io.File(reporte.fotoPathLocal),
-                    contentDescription = "Imagen local del reporte ${reporte.titulo}",
-                    modifier = Modifier.fillMaxWidth().height(180.dp),
-                    contentScale = ContentScale.Crop
-                )
             } else if (!reporte.fotoBase64.isNullOrBlank()) {
                 EcoConnectImageManager.convertirBase64ABitmap(reporte.fotoBase64)?.let { bmp ->
                     Image(
@@ -691,6 +684,13 @@ fun TarjetaReporteEngine(
                         contentScale = ContentScale.Crop
                     )
                 }
+            } else if (!reporte.fotoPathLocal.isNullOrBlank() && java.io.File(reporte.fotoPathLocal).exists()) {
+                AsyncImage(
+                    model = java.io.File(reporte.fotoPathLocal),
+                    contentDescription = "Imagen local del reporte ${reporte.titulo}",
+                    modifier = Modifier.fillMaxWidth().height(180.dp),
+                    contentScale = ContentScale.Crop
+                )
             }
 
             Column(modifier = Modifier.padding(16.dp)) {
@@ -756,6 +756,7 @@ fun VistaDetalleReporteEngine(
 
     val comentarios by viewModel.obtenerComentariosFlow(reporte.id).collectAsState(initial = emptyList())
     var nuevoComentario by remember { mutableStateOf("") }
+    var mostrarConfirmacionEliminar by remember { mutableStateOf(false) }
     val context = LocalContext.current
     var tts: TextToSpeech? by remember { mutableStateOf(null) }
 
@@ -768,34 +769,70 @@ fun VistaDetalleReporteEngine(
         onDispose { tts?.stop(); tts?.shutdown() }
     }
 
+    if (mostrarConfirmacionEliminar) {
+        AlertDialog(
+            onDismissRequest = { mostrarConfirmacionEliminar = false },
+            title = { Text("Eliminar Publicación", fontWeight = FontWeight.Bold) },
+            text = { Text("¿Estás seguro de que deseas eliminar este reporte? Se eliminará de tu dispositivo y de la nube en tiempo real.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.eliminarReporte(reporte.id)
+                        mostrarConfirmacionEliminar = false
+                        android.widget.Toast.makeText(context, "🗑️ Reporte eliminado exitosamente", android.widget.Toast.LENGTH_SHORT).show()
+                        onVolver()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
+                ) {
+                    Text("Eliminar")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { mostrarConfirmacionEliminar = false }) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Detalles del Reporte") },
-                navigationIcon = { IconButton(onClick = onVolver) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver") } }
+                navigationIcon = { IconButton(onClick = onVolver) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver") } },
+                actions = {
+                    IconButton(onClick = { mostrarConfirmacionEliminar = true }) {
+                        Icon(Icons.Default.Delete, contentDescription = "Eliminar Reporte", tint = Color.Red)
+                    }
+                }
             )
         }
     ) { padding ->
         LazyColumn(modifier = Modifier.padding(padding).padding(16.dp).fillMaxSize()) {
             item {
-                if (reporte.fotoUrlCloud != null) {
+                if (!reporte.fotoUrlCloud.isNullOrBlank()) {
                     AsyncImage(
                         model = reporte.fotoUrlCloud,
                         contentDescription = "Foto evidencia",
                         modifier = Modifier.fillMaxWidth().height(250.dp).clip(RoundedCornerShape(12.dp)),
                         contentScale = ContentScale.Crop
                     )
-                } else {
-                    reporte.fotoBase64?.let { base64 ->
-                        EcoConnectImageManager.convertirBase64ABitmap(base64)?.let { bmp ->
-                            Image(
-                                bitmap = bmp.asImageBitmap(),
-                                contentDescription = "Foto evidencia",
-                                modifier = Modifier.fillMaxWidth().height(250.dp).clip(RoundedCornerShape(12.dp)),
-                                contentScale = ContentScale.Crop
-                            )
-                        }
+                } else if (!reporte.fotoBase64.isNullOrBlank()) {
+                    EcoConnectImageManager.convertirBase64ABitmap(reporte.fotoBase64)?.let { bmp ->
+                        Image(
+                            bitmap = bmp.asImageBitmap(),
+                            contentDescription = "Foto evidencia",
+                            modifier = Modifier.fillMaxWidth().height(250.dp).clip(RoundedCornerShape(12.dp)),
+                            contentScale = ContentScale.Crop
+                        )
                     }
+                } else if (!reporte.fotoPathLocal.isNullOrBlank() && java.io.File(reporte.fotoPathLocal).exists()) {
+                    AsyncImage(
+                        model = java.io.File(reporte.fotoPathLocal),
+                        contentDescription = "Foto evidencia local",
+                        modifier = Modifier.fillMaxWidth().height(250.dp).clip(RoundedCornerShape(12.dp)),
+                        contentScale = ContentScale.Crop
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -909,11 +946,17 @@ fun VistaCrearReporteCamaraEngine(
     var prio by remember { mutableStateOf("Media") }
     var imageUri by remember { mutableStateOf<Uri?>(null) }
 
+    val context = LocalContext.current
+
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         imageUri = uri
-        if (uri != null) viewModel.analizarResiduosIA()
+        if (uri != null) {
+            viewModel.analizarResiduosIAConImagenYTexto(null, uri, titulo, desc, context) { catSugerida ->
+                cat = catSugerida
+            }
+        }
     }
 
     Scaffold(
@@ -922,9 +965,34 @@ fun VistaCrearReporteCamaraEngine(
         }
     ) { padding ->
         Column(modifier = Modifier.padding(padding).padding(24.dp).fillMaxSize().verticalScroll(rememberScrollState())) {
-            OutlinedTextField(value = titulo, onValueChange = { titulo = it }, label = { Text("Título de la incidencia") }, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(
+                value = titulo,
+                onValueChange = {
+                    titulo = it
+                    if (it.length > 3) {
+                        viewModel.analizarResiduosIAConImagenYTexto(null, imageUri, it, desc, context) { catSugerida ->
+                            cat = catSugerida
+                        }
+                    }
+                },
+                label = { Text("Título de la incidencia") },
+                modifier = Modifier.fillMaxWidth()
+            )
             Spacer(modifier = Modifier.height(8.dp))
-            OutlinedTextField(value = desc, onValueChange = { desc = it }, label = { Text("Descripción detallada") }, modifier = Modifier.fillMaxWidth(), minLines = 3)
+            OutlinedTextField(
+                value = desc,
+                onValueChange = {
+                    desc = it
+                    if (it.length > 5) {
+                        viewModel.analizarResiduosIAConImagenYTexto(null, imageUri, titulo, it, context) { catSugerida ->
+                            cat = catSugerida
+                        }
+                    }
+                },
+                label = { Text("Descripción detallada") },
+                modifier = Modifier.fillMaxWidth(),
+                minLines = 3
+            )
             Spacer(modifier = Modifier.height(8.dp))
             OutlinedTextField(value = ubi, onValueChange = { ubi = it }, label = { Text("Dirección aproximada") }, modifier = Modifier.fillMaxWidth())
             
@@ -995,10 +1063,24 @@ fun VistaCrearReporteCamaraEngine(
                     }
                 }
             }
+
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedButton(
+                onClick = {
+                    viewModel.analizarResiduosIAConImagenYTexto(null, imageUri, titulo, desc, context) { catSugerida ->
+                        cat = catSugerida
+                    }
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Default.AutoAwesome, null, tint = MaterialTheme.colorScheme.primary)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Analizar Fotografía y Texto con IA")
+            }
             
             if (viewModel.analizandoIA) {
                 LinearProgressIndicator(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp))
-                Text(stringResource(R.string.ia_analyzing), style = MaterialTheme.typography.labelSmall)
+                Text("Procesando visión computacional y clasificación semántica...", style = MaterialTheme.typography.labelSmall)
             }
 
             viewModel.resultadoIA?.let { res ->
@@ -1006,7 +1088,7 @@ fun VistaCrearReporteCamaraEngine(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
                 ) {
-                    Text("${stringResource(R.string.ia_result)} $res", modifier = Modifier.padding(16.dp), fontWeight = FontWeight.Bold)
+                    Text(res, modifier = Modifier.padding(16.dp), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
                 }
             }
             

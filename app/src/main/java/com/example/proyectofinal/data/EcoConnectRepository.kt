@@ -137,6 +137,19 @@ class EcoConnectCloudSyncEngine(
         }
     }
 
+    fun eliminarReporteDeFirebase(id: String) {
+        try {
+            val realtimeDb = FirebaseDatabase.getInstance()
+            realtimeDb.getReference("reportes_comunitarios").child(id).removeValue()
+
+            val db = FirebaseFirestore.getInstance()
+            db.collection("reportes").document(id).delete()
+            _estadoSincronizacion.value = "Reporte eliminado de Firebase Cloud"
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
     fun iniciarEscuchadorTiempoReal() {
         try {
             val realtimeDb = FirebaseDatabase.getInstance()
@@ -145,8 +158,12 @@ class EcoConnectCloudSyncEngine(
             ref.addValueEventListener(object : ValueEventListener {
                 override fun onDataChange(snapshot: DataSnapshot) {
                     GlobalScope.launch(Dispatchers.IO) {
+                        val remoteIds = HashSet<String>()
+
                         for (child in snapshot.children) {
                             val id = child.child("id").getValue(String::class.java) ?: child.key ?: continue
+                            remoteIds.add(id)
+
                             val titulo = child.child("titulo").getValue(String::class.java) ?: ""
                             val descripcion = child.child("descripcion").getValue(String::class.java) ?: ""
                             val categoria = child.child("categoria").getValue(String::class.java) ?: "Basura"
@@ -163,6 +180,8 @@ class EcoConnectCloudSyncEngine(
                             val resuelto = child.child("resuelto").getValue(Boolean::class.java) ?: false
                             val kgCO2Evitados = child.child("kgCO2Evitados").getValue(Double::class.java) ?: 0.0
 
+                            val localReporte = database.reporteDao().obtenerReportePorId(id)
+
                             val entity = ReporteEntity(
                                 id = id,
                                 titulo = titulo,
@@ -176,14 +195,22 @@ class EcoConnectCloudSyncEngine(
                                 autorNombre = autorNombre,
                                 autorEmail = autorEmail,
                                 fechaCreacion = fechaCreacion,
-                                fotoPathLocal = null,
-                                fotoBase64 = if (!fotoBase64.isNullOrBlank()) fotoBase64 else null,
-                                fotoUrlCloud = if (!fotoUrlCloud.isNullOrBlank()) fotoUrlCloud else null,
+                                fotoPathLocal = localReporte?.fotoPathLocal,
+                                fotoBase64 = if (!fotoBase64.isNullOrBlank()) fotoBase64 else localReporte?.fotoBase64,
+                                fotoUrlCloud = if (!fotoUrlCloud.isNullOrBlank()) fotoUrlCloud else localReporte?.fotoUrlCloud,
                                 sincronizadoCloud = true,
                                 resuelto = resuelto,
                                 kgCO2Evitados = kgCO2Evitados
                             )
                             database.reporteDao().insertarReporte(entity)
+                        }
+
+                        // Sincronizar eliminaciones: borrar localmente reportes que fueron eliminados en Firebase
+                        val localList = database.reporteDao().obtenerTodosLosReportes().first()
+                        for (local in localList) {
+                            if (local.sincronizadoCloud && !remoteIds.contains(local.id)) {
+                                database.reporteDao().eliminarReporte(local.id)
+                            }
                         }
                     }
                 }
@@ -237,11 +264,23 @@ class EcoConnectRepository(
 
         var pathLocal: String? = null
         var base64Imagen: String? = null
+        var bitmapActual: Bitmap? = bitmapImagen
 
-        if (bitmapImagen != null) {
+        // Decodificar Bitmap desde Uri de la galería si bitmapImagen es nulo
+        if (bitmapActual == null && imageUri != null) {
+            try {
+                context.contentResolver.openInputStream(imageUri)?.use { inputStream ->
+                    bitmapActual = android.graphics.BitmapFactory.decodeStream(inputStream)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+
+        if (bitmapActual != null) {
             val nombreArchivo = "foto_eco_${System.currentTimeMillis()}"
-            pathLocal = EcoConnectImageManager.guardarBitmapEnAlmacenamientoInterno(context, bitmapImagen, nombreArchivo)
-            base64Imagen = EcoConnectImageManager.optimizarImagenParaSubida(bitmapImagen)
+            pathLocal = EcoConnectImageManager.guardarBitmapEnAlmacenamientoInterno(context, bitmapActual!!, nombreArchivo)
+            base64Imagen = EcoConnectImageManager.optimizarImagenParaSubida(bitmapActual!!)
         }
 
         val fechaActual = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date())
@@ -334,6 +373,7 @@ class EcoConnectRepository(
 
     suspend fun eliminarReporte(id: String) = withContext(Dispatchers.IO) {
         database.reporteDao().eliminarReporte(id)
+        cloudSyncEngine.eliminarReporteDeFirebase(id)
     }
 
     fun buscarReportes(query: String): Flow<List<ReporteEntity>> {
