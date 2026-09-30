@@ -13,7 +13,7 @@
 ## 🔗 **Enlaces Directos del Proyecto**
 
 * 🌐 **Landing Page Pública:** [https://IsaacBetance.github.io/ProyectoFinal/landing-page/](https://IsaacBetance.github.io/ProyectoFinal/landing-page/)
-* ⬇️ **Descargar APK Funcional:** [DESCARGAR ECOCONNECT.APK](./APK/EcoConnect.apk)
+* ⬇️ **Descargar APK Funcional:** [DESCARGAR ECOCONNECT.APK](https://github.com/YoIsaac/Descargar-Eccoconect.git)
 * 📄 **Documentación Técnica PDF (Fase I + II):** [VER DOCUMENTO FINAL PDF](./documentacion/documento-final.pdf)
 * 🎬 **Video Demostrativo:** [VER DETALLES Y ENLACE DE VIDEO](./video/enlace-video.txt)
 
