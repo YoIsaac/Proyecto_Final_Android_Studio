@@ -183,17 +183,59 @@ fun VistaSplashScreenEngine(onTimeout: () -> Unit) {
         delay(2.seconds)
         onTimeout()
     }
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(
-                imageVector = Icons.Default.Spa,
-                contentDescription = stringResource(R.string.app_name),
-                modifier = Modifier.size(100.dp),
-                tint = MaterialTheme.colorScheme.primary
-            )
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFFF4F7F5)),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            // Logotipo oficial EcoConect con hojas y tipografía personalizada
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = "ECO",
+                    style = MaterialTheme.typography.headlineLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF2E6F40)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                // Hojas estilizadas (verde claro y verde oscuro)
+                Box(contentAlignment = Alignment.Center, modifier = Modifier.size(52.dp)) {
+                    Icon(
+                        imageVector = Icons.Default.Spa,
+                        contentDescription = null,
+                        modifier = Modifier.size(44.dp),
+                        tint = Color(0xFF81C784) // Verde claro
+                    )
+                    Icon(
+                        imageVector = Icons.Default.Spa,
+                        contentDescription = null,
+                        modifier = Modifier.size(36.dp).offset(x = (-8).dp, y = 6.dp),
+                        tint = Color(0xFF388E3C) // Verde oscuro
+                    )
+                }
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = "CONECT",
+                    style = MaterialTheme.typography.headlineLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF2E6F40)
+                )
+            }
             Spacer(modifier = Modifier.height(16.dp))
-            Text(stringResource(R.string.app_name), style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.primary)
-            Text(stringResource(R.string.slogan), style = MaterialTheme.typography.bodySmall)
+            Text(
+                text = stringResource(R.string.slogan),
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color(0xFF558B2F),
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(horizontal = 32.dp)
+            )
         }
     }
 }
